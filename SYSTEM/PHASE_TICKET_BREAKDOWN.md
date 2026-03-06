@@ -156,6 +156,10 @@ Create and update PRs from worktree branches.
 
 ### P1-008 Add PR label syncing
 
+Status: done
+Branch: `feature/P1-008-add-pr-label-syncing`
+PR: `#20`
+
 Mirror core labels from issues to PRs where appropriate.
 
 ### P1-009 Implement issue rejection/defer flow
