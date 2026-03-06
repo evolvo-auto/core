@@ -468,41 +468,81 @@ convert failures into self-improvement work.
 
 ### P5-001 Implement failure taxonomy
 
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
+
 Define failure phases and categories.
 
 ### P5-002 Create failure reflection pipeline
+
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
 
 Generate `FailureReflection` from failed attempts.
 
 ### P5-003 Implement recurrence clustering
 
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
+
 Group related failures into recurring themes.
 
 ### P5-004 Create failure issue generator
+
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
 
 Open `kind:failure` issues from structured reflections.
 
 ### P5-005 Create mutation proposal generator
 
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
+
 Open `kind:mutation` issues from systemic failures or trends.
 
 ### P5-006 Persist mutation proposals and outcomes
+
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
 
 Track lifecycle from proposal to adoption/rejection.
 
 ### P5-007 Implement capability tracking
 
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
+
 Track capability confidence and recurring failure modes.
 
 ### P5-008 Add failure and mutation dashboard views
+
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
 
 Visualise recurrence, systemic surfaces, and proposal queue.
 
 ### P5-009 Add selector weighting for repeated failures
 
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
+
 Let recurrence influence prioritisation.
 
 ### P5-010 Implement direct-fix vs mutation-first decisioning
+
+Status: done
+Branch: `feature/P5-complete-failure-memory-and-mutations`
+PR: `#33`
 
 Allow systemic fixes to outrank one-off repairs.
 
