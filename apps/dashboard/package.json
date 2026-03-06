@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@next/env": "^16.1.6",
+    "@evolvo/api": "workspace:*",
     "@evolvo/query": "workspace:*",
     "@evolvo/schemas": "workspace:*",
     "@tanstack/react-query": "^5.90.2",

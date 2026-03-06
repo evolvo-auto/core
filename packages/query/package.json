@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./getQueryClient": "./src/getQueryClient.ts",
-    "./health": "./src/health.ts"
+    "./health": "./src/health.ts",
+    "./worktrees": "./src/worktrees.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",

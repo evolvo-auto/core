@@ -47,6 +47,9 @@ importers:
 
   apps/dashboard:
     dependencies:
+      '@evolvo/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@evolvo/query':
         specifier: workspace:*
         version: link:../../packages/query
@@ -291,6 +294,9 @@ importers:
       '@evolvo/api':
         specifier: workspace:*
         version: link:../api
+      '@evolvo/github':
+        specifier: workspace:*
+        version: link:../github
     devDependencies:
       '@evolvo/typescript-config':
         specifier: workspace:*
