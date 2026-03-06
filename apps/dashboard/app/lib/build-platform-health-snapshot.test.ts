@@ -10,8 +10,8 @@ describe('buildPlatformHealthSnapshot', () => {
   it('marks probe targets unavailable when the URLs are not configured', async () => {
     const snapshot = await buildPlatformHealthSnapshot({
       now,
-      runtimeHealthUrl: undefined,
-      supervisorHealthUrl: undefined
+      runtimeHealthUrl: '',
+      supervisorHealthUrl: ''
     });
 
     expect(snapshot.services).toMatchObject([

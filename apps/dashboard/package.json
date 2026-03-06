@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@next/env": "^16.1.6",
     "@evolvo/query": "workspace:*",
     "@evolvo/schemas": "workspace:*",
     "@tanstack/react-query": "^5.90.2",

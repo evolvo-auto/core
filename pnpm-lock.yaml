@@ -52,6 +52,9 @@ importers:
       '@evolvo/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
+      '@next/env':
+        specifier: ^16.1.6
+        version: 16.1.6
       '@tanstack/react-query':
         specifier: ^5.90.2
         version: 5.90.21(react@19.2.4)

@@ -8,7 +8,11 @@ import {
   type ServiceName
 } from '@evolvo/schemas/health-schemas';
 
+import { loadDashboardEnv } from '../../env';
+
 import { buildDashboardHealth } from './build-dashboard-health';
+
+loadDashboardEnv();
 
 type ProbeableServiceName = Extract<ServiceName, 'runtime' | 'supervisor'>;
 
