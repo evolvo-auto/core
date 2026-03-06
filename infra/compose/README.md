@@ -7,6 +7,11 @@ Current stack:
 - `postgres`
 - `adminer`
 
+Environment source:
+
+- create a root `.env` file from `.env.example`
+- the compose scripts explicitly read from that root `.env`
+
 Use the root package scripts to operate the stack:
 
 - `pnpm services:validate`
