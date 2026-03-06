@@ -172,6 +172,10 @@ Allow Evolvo to explain and label ignored or deferred issues.
 
 ### P1-010 Add GitHub audit event persistence
 
+Status: done
+Branch: `feature/P1-010-add-github-audit-event-persistence`
+PR: `#22`
+
 Store key GitHub actions locally for observability.
 
 ---
