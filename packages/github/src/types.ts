@@ -49,6 +49,60 @@ export type GitHubPullRequest =
 export type GitHubPullRequestListItem =
   RestEndpointMethodTypes['pulls']['list']['response']['data'][number];
 
+export type GitHubIssueWorkflowState =
+  | 'TRIAGE'
+  | 'PLANNED'
+  | 'SELECTED'
+  | 'IN_PROGRESS'
+  | 'AWAITING_EVAL'
+  | 'AWAITING_PROMOTION'
+  | 'BLOCKED'
+  | 'DONE'
+  | 'REJECTED'
+  | 'DEFERRED';
+
+export type GitHubIssueKind =
+  | 'IDEA'
+  | 'CHALLENGE'
+  | 'FEATURE'
+  | 'BUG'
+  | 'EXPERIMENT'
+  | 'FAILURE'
+  | 'MUTATION'
+  | 'UPGRADE'
+  | 'BENCHMARK'
+  | 'APPROVAL_REQUEST';
+
+export type GitHubIssueSource = 'HUMAN' | 'EVOLVO';
+
+export type GitHubIssueRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'SYSTEMIC';
+
+export type GitHubIssueSurface =
+  | 'PROMPTS'
+  | 'TEMPLATES'
+  | 'ROUTING'
+  | 'RUNTIME'
+  | 'EVALUATOR'
+  | 'BENCHMARKS'
+  | 'MEMORY'
+  | 'WORKTREES'
+  | 'SUPERVISOR'
+  | 'DASHBOARD'
+  | 'GITHUB_OPS'
+  | 'EXTERNAL_REPO';
+
+export type GitHubIssueClassification = {
+  currentLabels: string[];
+  githubIssueNumber: number;
+  kind: GitHubIssueKind;
+  priorityScore?: number;
+  riskLevel?: GitHubIssueRiskLevel;
+  source: GitHubIssueSource;
+  state: GitHubIssueWorkflowState;
+  surfaces: GitHubIssueSurface[];
+  title: string;
+};
+
 export type GitHubLabelGroup =
   | 'source'
   | 'kind'

@@ -174,6 +174,30 @@ describe('issue sync service', () => {
       ]
     });
     expect(result).toEqual({
+      classifiedIssues: [
+        {
+          currentLabels: ['kind:idea'],
+          githubIssueNumber: 1,
+          kind: 'IDEA',
+          priorityScore: undefined,
+          riskLevel: undefined,
+          source: 'HUMAN',
+          state: 'TRIAGE',
+          surfaces: [],
+          title: 'First issue'
+        },
+        {
+          currentLabels: ['state:done', 'source:evolvo'],
+          githubIssueNumber: 2,
+          kind: 'IDEA',
+          priorityScore: undefined,
+          riskLevel: undefined,
+          source: 'EVOLVO',
+          state: 'DONE',
+          surfaces: [],
+          title: 'Second issue'
+        }
+      ],
       dryRun: false,
       fetchedCount: 3,
       ignoredPullRequestCount: 1,
