@@ -7,6 +7,7 @@ Planned packages:
 * `benchmarks`
 * `challenges`
 * `core`
+* `eslint-config`
 * `evaluation`
 * `execution`
 * `github`
@@ -18,5 +19,8 @@ Planned packages:
 * `prompts`
 * `schemas`
 * `scoring`
+* `typescript-config`
+* `ui`
 * `utils`
+* `vitest-config`
 * `worktrees`
