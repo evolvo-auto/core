@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     "./config-loader": "./src/config-loader.ts",
-    "./model-routing-config": "./src/model-routing-config.ts"
+    "./heuristic-config": "./src/heuristic-config.ts",
+    "./model-routing-config": "./src/model-routing-config.ts",
+    "./prompt-definition-config": "./src/prompt-definition-config.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
@@ -15,6 +17,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@evolvo/schemas": "workspace:*",
     "dotenv": "^17.2.2",
     "zod": "^4.1.5"
   },

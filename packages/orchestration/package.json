@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@evolvo/core": "workspace:*",
+    "@evolvo/genome": "workspace:*",
     "@evolvo/models": "workspace:*",
     "@evolvo/schemas": "workspace:*"
   },

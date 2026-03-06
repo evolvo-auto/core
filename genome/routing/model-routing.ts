@@ -1,4 +1,4 @@
-import type { RoutingPolicyConfig } from '../../packages/core/src/model-routing-config.js';
+import type { RoutingPolicyConfig } from '@evolvo/core/model-routing-config';
 
 export const routingPolicy: RoutingPolicyConfig = {
   defaultRoleRouting: [

@@ -1,3 +1,5 @@
+import { failureStrategyHeuristics } from '@evolvo/genome/heuristics/failure-strategy';
+
 export type FailureHandlingStrategy =
   | 'defer'
   | 'direct-fix'
@@ -30,15 +32,18 @@ export function decideFailureHandlingStrategy(
   if (
     input.mutationRecommended &&
     (input.isSystemic ||
-      input.recurrenceCount >= 2 ||
-      (input.capabilityConfidenceScore ?? 100) < 45)
+      input.recurrenceCount >=
+        failureStrategyHeuristics.mutationFirstMinRecurrence ||
+      (input.capabilityConfidenceScore ?? 100) <
+        failureStrategyHeuristics.mutationFirstLowConfidenceThreshold)
   ) {
     return 'mutation-first';
   }
 
   if (
     input.directFixRecommended &&
-    input.recurrenceCount < 2 &&
+    input.recurrenceCount <=
+      failureStrategyHeuristics.directFixMaxRecurrence &&
     !input.isSystemic
   ) {
     return 'direct-fix';
