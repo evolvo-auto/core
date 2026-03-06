@@ -19,6 +19,8 @@
     "db:validate": "prisma validate --config prisma.config.ts",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
+    "github:issues:plan": "pnpm --filter @evolvo/github issues:plan",
+    "github:issues:sync": "pnpm --filter @evolvo/github issues:sync",
     "github:labels:plan": "pnpm --filter @evolvo/github labels:plan",
     "github:labels:sync": "pnpm --filter @evolvo/github labels:sync",
     "lint": "turbo run lint",

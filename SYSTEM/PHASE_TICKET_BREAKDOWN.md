@@ -116,6 +116,10 @@ Implement label sync/bootstrap for the initial taxonomy.
 
 ### P1-003 Build issue sync service
 
+Status: done
+Branch: `feature/P1-003-build-issue-sync-service`
+PR: `#13`
+
 Read issues, normalise labels, cache relevant metadata to DB.
 
 ### P1-004 Implement issue classification

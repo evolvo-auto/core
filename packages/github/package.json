@@ -6,17 +6,21 @@
   "exports": {
     "./auth": "./src/auth.ts",
     "./comments": "./src/comments.ts",
+    "./issue-sync": "./src/issue-sync.ts",
     "./issues": "./src/issues.ts",
     "./label-taxonomy": "./src/label-taxonomy.ts",
     "./labels": "./src/labels.ts",
     "./pull-requests": "./src/pull-requests.ts",
     "./repository": "./src/repository.ts",
+    "./sync-issues": "./src/sync-issues.ts",
     "./sync-labels": "./src/sync-labels.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
     "clean": "git clean -fdX .",
+    "issues:plan": "tsx src/sync-issues.ts --dry-run",
+    "issues:sync": "tsx src/sync-issues.ts",
     "labels:plan": "tsx src/sync-labels.ts --dry-run",
     "labels:sync": "tsx src/sync-labels.ts",
     "lint": "eslint . --max-warnings 0 --no-error-on-unmatched-pattern",
@@ -24,6 +28,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@evolvo/api": "workspace:*",
     "@evolvo/core": "workspace:*",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "octokit": "^5.0.5"
