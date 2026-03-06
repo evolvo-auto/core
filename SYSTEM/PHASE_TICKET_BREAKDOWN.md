@@ -314,25 +314,49 @@ Install deps, verify tooling, write environment fingerprint.
 
 ### P3-005 Implement command execution engine
 
+Status: done
+Branch: `feature/P3-005-006-007-008-009-010-complete-phase-3`
+PR: `#29`
+
 Run commands with timeout, stdout/stderr capture, exit code tracking.
 
 ### P3-006 Implement attempt journal
+
+Status: done
+Branch: `feature/P3-005-006-007-008-009-010-complete-phase-3`
+PR: `#29`
 
 Record commands, timestamps, notes, and status transitions.
 
 ### P3-007 Implement artifact persistence
 
+Status: done
+Branch: `feature/P3-005-006-007-008-009-010-complete-phase-3`
+PR: `#29`
+
 Store logs and evaluation reports outside disposable worktrees.
 
 ### P3-008 Implement worktree cleanup
+
+Status: done
+Branch: `feature/P3-005-006-007-008-009-010-complete-phase-3`
+PR: `#29`
 
 Clean finished worktrees after artifact persistence.
 
 ### P3-009 Add worktree dashboard view
 
+Status: done
+Branch: `feature/P3-005-006-007-008-009-010-complete-phase-3`
+PR: `#29`
+
 Show active/failed/completed worktrees.
 
 ### P3-010 Add blocker handling for worktree failures
+
+Status: done
+Branch: `feature/P3-005-006-007-008-009-010-complete-phase-3`
+PR: `#29`
 
 Map setup failures back into structured issue comments.
 
