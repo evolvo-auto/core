@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./attempt-record": "./src/attempt-record.ts",
     "./client": "./src/client.ts",
     "./database-url": "./src/database-url.ts",
     "./github-audit-event": "./src/github-audit-event.ts",
