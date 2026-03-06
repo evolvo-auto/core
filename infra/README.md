@@ -2,8 +2,10 @@
 
 Infrastructure support files for local development and runtime operations.
 
-Planned directories:
+Current directories:
 
 - `compose`
 - `docker`
 - `scripts`
+
+Current local stack support lives under `infra/compose`.

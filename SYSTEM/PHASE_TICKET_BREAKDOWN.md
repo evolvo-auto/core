@@ -29,6 +29,10 @@ Configure pnpm workspace, root scripts, linting, formatting, and base build.
 
 ### P0-003 Add Docker Compose for Postgres and local services
 
+Status: done
+Branch: `feature/P0-003-add-docker-compose-for-postgres-and-local-services`
+PR: `#3`
+
 Create compose config for Postgres and supporting services needed in WSL.
 
 ### P0-004 Create database package and migration setup
