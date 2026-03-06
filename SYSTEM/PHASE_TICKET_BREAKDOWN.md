@@ -61,6 +61,10 @@ Add Zod schemas for role outputs and shared enums.
 
 ### P0-007 Create logging and structured event utility
 
+Status: done
+Branch: `feature/P0-007-create-logging-and-structured-event-utility`
+PR: `#7`
+
 Add structured logging with correlation IDs for issue, attempt, worktree, runtime version.
 
 ### P0-008 Create config loader
