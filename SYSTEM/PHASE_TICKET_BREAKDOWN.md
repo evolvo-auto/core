@@ -13,6 +13,10 @@ create the core skeleton and environment.
 
 ### P0-001 Create monorepo structure
 
+Status: done
+Branch: `feature/P0-001-create-monorepo-structure`
+PR: `#1`
+
 Create `apps/`, `packages/`, `genome/`, `infra/`, and base TypeScript config.
 
 ### P0-002 Set up package manager and workspace config
