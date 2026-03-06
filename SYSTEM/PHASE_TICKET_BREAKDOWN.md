@@ -100,6 +100,10 @@ Evolvo can read issues and write back.
 
 ### P1-001 Integrate GitHub API client
 
+Status: done
+Branch: `feature/P1-001-integrate-github-api-client`
+PR: `#11`
+
 Create GitHub package with auth and typed operations.
 
 ### P1-002 Seed GitHub labels
