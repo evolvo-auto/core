@@ -37,6 +37,10 @@ Create compose config for Postgres and supporting services needed in WSL.
 
 ### P0-004 Create database package and migration setup
 
+Status: done
+Branch: `feature/P0-004-create-database-package-and-migration-setup`
+PR: `#4`
+
 Choose Prisma and wire migrations.
 
 ### P0-005 Define initial database schema
