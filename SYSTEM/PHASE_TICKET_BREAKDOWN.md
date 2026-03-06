@@ -85,6 +85,10 @@ Create minimal Next.js dashboard with health overview.
 
 ### P0-010 Add health endpoint contracts
 
+Status: done
+Branch: `feature/P0-010-add-health-endpoint-contracts`
+PR: `#10`
+
 Add health contract for supervisor/runtime/dashboard.
 
 ---

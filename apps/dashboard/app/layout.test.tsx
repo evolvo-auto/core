@@ -8,7 +8,11 @@ vi.mock('next/font/google', () => ({
   })
 }));
 
-import RootLayout from './layout.js';
+vi.mock('./providers', () => ({
+  default: ({ children }: { children: React.ReactNode }) => children
+}));
+
+import RootLayout from './layout';
 
 describe('RootLayout', () => {
   it('renders the required html and body structure for the app router', () => {

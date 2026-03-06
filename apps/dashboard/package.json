@@ -13,9 +13,14 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@next/env": "^16.1.6",
+    "@evolvo/query": "workspace:*",
+    "@evolvo/schemas": "workspace:*",
+    "@tanstack/react-query": "^5.90.2",
     "next": "^16.1.6",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@evolvo/tailwind-config": "workspace:*",
