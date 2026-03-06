@@ -108,6 +108,10 @@ Create GitHub package with auth and typed operations.
 
 ### P1-002 Seed GitHub labels
 
+Status: done
+Branch: `feature/P1-002-seed-github-labels`
+PR: `#12`
+
 Implement label sync/bootstrap for the initial taxonomy.
 
 ### P1-003 Build issue sync service
