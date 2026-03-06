@@ -4,6 +4,6 @@ Runnable entrypoints for Evolvo.
 
 Planned apps:
 
-* `dashboard`
-* `runtime`
-* `supervisor`
+- `dashboard`
+- `runtime`
+- `supervisor`
