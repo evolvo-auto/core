@@ -9,6 +9,7 @@
     "./failure-followup": "./src/failure-followup.ts",
     "./git-operations": "./src/git-operations.ts",
     "./issue-executor": "./src/issue-executor.ts",
+    "./logging-policy": "./src/logging-policy.ts",
     "./repository-context": "./src/repository-context.ts",
     "./runtime-loop": "./src/runtime-loop.ts"
   },

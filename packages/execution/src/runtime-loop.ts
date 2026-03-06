@@ -8,6 +8,12 @@ import { buildIssuePriorityScore } from '@evolvo/scoring/issue-priority';
 import type { SmokeContract } from '@evolvo/evaluation/smoke-contract';
 
 import {
+  resolveExecutionLoggingConfig,
+  shouldIncludeVerboseTerminalData,
+  type ExecutionLoggingConfig,
+  toTerminalLogLevel
+} from './logging-policy.js';
+import {
   executeIssueAttempt,
   type ExecuteIssueAttemptInput,
   type ExecuteIssueAttemptResult
@@ -28,6 +34,7 @@ export type CreateRuntimeLoopInput = {
   baseRef?: string;
   gitRemote?: string;
   intervalMs: number;
+  logging?: Partial<ExecutionLoggingConfig>;
   maxRepairAttempts?: number;
   smokeContract?: SmokeContract;
   worktreesRoot?: string;
@@ -43,10 +50,6 @@ export type CreateRuntimeLoopDependencies = {
   selectIssue?: typeof runSelectorRole;
   syncIssues?: typeof syncRepositoryIssues;
 };
-
-const logger = createLogger({
-  source: 'execution/runtime-loop'
-});
 
 function toRiskLevel(
   riskLevel: 'HIGH' | 'LOW' | 'MEDIUM' | 'SYSTEMIC' | null | undefined
@@ -69,6 +72,14 @@ export function createRuntimeLoop(
   input: CreateRuntimeLoopInput,
   dependencies: CreateRuntimeLoopDependencies = {}
 ) {
+  const logging = resolveExecutionLoggingConfig(input.logging);
+  const includeVerboseData = shouldIncludeVerboseTerminalData(
+    logging.verbosity
+  );
+  const logger = createLogger({
+    minLevel: toTerminalLogLevel(logging.verbosity),
+    source: 'execution/runtime-loop'
+  });
   const defer = dependencies.defer ?? deferIssue;
   const executeIssue = dependencies.executeIssue ?? executeIssueAttempt;
   const listFailures = dependencies.listFailures ?? listFailureRecords;
@@ -94,6 +105,16 @@ export function createRuntimeLoop(
     status.lastCycleStartedAt = now().toISOString();
     status.lastErrorMessage = undefined;
     status.state = 'syncing';
+    logger.info({
+      eventName: 'runtime-loop.cycle.started',
+      message: 'Runtime loop cycle started.',
+      data: includeVerboseData
+        ? {
+            intervalMs: input.intervalMs,
+            consecutiveFailures: status.consecutiveFailures
+          }
+        : undefined
+    });
 
     try {
       await syncIssues({
@@ -107,10 +128,30 @@ export function createRuntimeLoop(
         limit: 500
       });
 
+      logger.info({
+        eventName: 'runtime-loop.cycle.synced',
+        message: 'Runtime loop synchronized GitHub issues and local failure memory.',
+        data: {
+          candidateIssueCount: candidateIssues.length,
+          recordedFailureCount: recordedFailures.length,
+          ...(includeVerboseData
+            ? {
+                candidateIssueNumbers: candidateIssues.map(
+                  (issueRecord) => issueRecord.githubIssueNumber
+                )
+              }
+            : {})
+        }
+      });
+
       if (candidateIssues.length === 0) {
         status.consecutiveFailures = 0;
         status.lastOutcome = 'idle';
         status.state = 'idle';
+        logger.info({
+          eventName: 'runtime-loop.cycle.idle',
+          message: 'No eligible issues were available for execution.'
+        });
         return;
       }
 
@@ -178,6 +219,25 @@ export function createRuntimeLoop(
       });
 
       status.lastDecisionType = selection.decisionType;
+      logger.info({
+        correlationIds: {
+          issueNumber: selection.targetIssueNumber
+        },
+        eventName: 'runtime-loop.selection.completed',
+        message: 'Runtime loop completed issue selection.',
+        data: {
+          decisionType: selection.decisionType,
+          nextStep: selection.nextStep,
+          reason: selection.reason,
+          ...(includeVerboseData
+            ? {
+                priorityScore: selection.priorityScore,
+                strategicValueScore: selection.strategicValueScore,
+                urgencyScore: selection.urgencyScore
+              }
+            : {})
+        }
+      });
 
       if (
         selection.decisionType === 'defer-issue' &&
@@ -190,6 +250,17 @@ export function createRuntimeLoop(
         status.consecutiveFailures = 0;
         status.lastOutcome = 'deferred';
         status.state = 'idle';
+        logger.info({
+          correlationIds: {
+            issueNumber: selection.targetIssueNumber
+          },
+          eventName: 'runtime-loop.selection.deferred',
+          message: 'Runtime loop deferred the selected issue.',
+          data: {
+            nextStep: selection.nextStep,
+            reason: selection.reason
+          }
+        });
         return;
       }
 
@@ -204,6 +275,17 @@ export function createRuntimeLoop(
         status.consecutiveFailures = 0;
         status.lastOutcome = 'rejected';
         status.state = 'idle';
+        logger.info({
+          correlationIds: {
+            issueNumber: selection.targetIssueNumber
+          },
+          eventName: 'runtime-loop.selection.rejected',
+          message: 'Runtime loop rejected the selected issue.',
+          data: {
+            nextStep: selection.nextStep,
+            reason: selection.reason
+          }
+        });
         return;
       }
 
@@ -214,16 +296,33 @@ export function createRuntimeLoop(
         status.consecutiveFailures = 0;
         status.lastOutcome = 'idle';
         status.state = 'idle';
+        logger.info({
+          eventName: 'runtime-loop.selection.idle',
+          message:
+            'Issue selection completed without choosing an executable issue.',
+          data: {
+            decisionType: selection.decisionType,
+            nextStep: selection.nextStep
+          }
+        });
         return;
       }
 
       status.lastSelectedIssueNumber = selection.targetIssueNumber;
       status.state = 'executing';
+      logger.info({
+        correlationIds: {
+          issueNumber: selection.targetIssueNumber
+        },
+        eventName: 'runtime-loop.execution.started',
+        message: 'Runtime loop started executing the selected issue.'
+      });
 
       const result = await executeIssue({
         baseRef: input.baseRef,
         gitRemote: input.gitRemote,
         issueNumber: selection.targetIssueNumber,
+        logging,
         maxRepairAttempts: input.maxRepairAttempts,
         smokeContract: input.smokeContract,
         worktreesRoot: input.worktreesRoot
@@ -232,6 +331,18 @@ export function createRuntimeLoop(
       status.consecutiveFailures = result.outcome === 'failed' ? 1 : 0;
       status.lastOutcome = result.outcome;
       status.state = 'idle';
+      logger.info({
+        correlationIds: {
+          issueNumber: selection.targetIssueNumber
+        },
+        eventName: 'runtime-loop.execution.completed',
+        message: 'Runtime loop finished executing the selected issue.',
+        data: {
+          outcome: result.outcome,
+          pullRequestNumber: result.pullRequestNumber,
+          worktreeId: result.worktreeId
+        }
+      });
     } catch (error) {
       status.consecutiveFailures += 1;
       status.lastErrorMessage = error instanceof Error ? error.message : String(error);
@@ -262,6 +373,14 @@ export function createRuntimeLoop(
         : input.intervalMs;
 
     status.state = 'sleeping';
+    logger.info({
+      eventName: 'runtime-loop.cycle.sleeping',
+      message: 'Runtime loop scheduled the next cycle.',
+      data: {
+        delayMs,
+        consecutiveFailures: status.consecutiveFailures
+      }
+    });
     timer = setTimeout(async () => {
       await runOnce();
       scheduleNextTick();

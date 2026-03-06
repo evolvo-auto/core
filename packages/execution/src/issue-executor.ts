@@ -13,8 +13,14 @@ import { transitionIssueState } from '@evolvo/github/issue-state';
 import { deferIssue, rejectIssue } from '@evolvo/github/issue-disposition';
 import { upsertPullRequestFromBranch, syncPullRequestLabelsFromIssue } from '@evolvo/github/pull-requests';
 import { getIssue } from '@evolvo/github/issues';
-import type { TransitionIssueStateResult } from '@evolvo/github/types';
-import { createLogger } from '@evolvo/observability/logger';
+import type {
+  StructuredIssueCommentInput,
+  TransitionIssueStateResult
+} from '@evolvo/github/types';
+import {
+  createLogger,
+  type StructuredLogger
+} from '@evolvo/observability/logger';
 import { runCriticRole } from '@evolvo/orchestration/critic-role';
 import { runPlannerRole } from '@evolvo/orchestration/planner-role';
 import type {
@@ -43,6 +49,13 @@ import {
 
 import { runBuilderOrchestration, type RunBuilderOrchestrationResult } from './builder-orchestration.js';
 import {
+  resolveExecutionLoggingConfig,
+  shouldIncludeVerboseTerminalData,
+  shouldPostIssueProgressComments,
+  type ExecutionLoggingConfig,
+  toTerminalLogLevel
+} from './logging-policy.js';
+import {
   processFailureFollowup
 } from './failure-followup.js';
 import {
@@ -66,6 +79,7 @@ export type ExecuteIssueAttemptInput = {
   baseRef?: string;
   gitRemote?: string;
   issueNumber: number;
+  logging?: Partial<ExecutionLoggingConfig>;
   maxRepairAttempts?: number;
   smokeContract?: SmokeContract;
   worktreesRoot?: string;
@@ -107,10 +121,6 @@ export type ExecuteIssueAttemptDependencies = {
   updateWorktree?: typeof updateWorktreeRecord;
   writeComment?: typeof writeStructuredIssueComment;
 };
-
-const logger = createLogger({
-  source: 'execution/issue-executor'
-});
 
 function resolveCapability(
   labels: string[],
@@ -316,7 +326,8 @@ function buildArtifactSet(input: {
 async function syncLocalIssueState(
   issueNumber: number,
   transitionResult: TransitionIssueStateResult,
-  updateIssue: typeof updateIssueRecord
+  updateIssue: typeof updateIssueRecord,
+  logger: StructuredLogger
 ): Promise<void> {
   await updateIssue({
     currentLabels: transitionResult.nextLabels,
@@ -333,6 +344,43 @@ async function syncLocalIssueState(
       message: 'Issue state transition completed on GitHub but local cache sync failed.'
     });
   });
+}
+
+function summarizeCheckResults(evaluationResult: RunEvaluationResult): string {
+  return evaluationResult.checkResults
+    .map((checkResult) => `${checkResult.name}=${checkResult.result}`)
+    .join(', ');
+}
+
+async function writeVerboseProgressComment(
+  issueNumber: number,
+  input: Omit<StructuredIssueCommentInput, 'commentKind'>,
+  options: {
+    logger: StructuredLogger;
+    logging: ExecutionLoggingConfig;
+    writeComment: typeof writeStructuredIssueComment;
+  }
+): Promise<void> {
+  if (!shouldPostIssueProgressComments(options.logging.verbosity)) {
+    return;
+  }
+
+  try {
+    await options.writeComment(issueNumber, {
+      ...input,
+      commentKind: 'progress'
+    });
+  } catch (error) {
+    options.logger.warn({
+      correlationIds: {
+        issueNumber
+      },
+      error,
+      eventName: 'issue-progress-comment.skipped',
+      message:
+        'A verbose progress comment could not be posted, so execution continued without it.'
+    });
+  }
 }
 
 function buildFailureState(
@@ -367,6 +415,17 @@ export async function executeIssueAttempt(
   input: ExecuteIssueAttemptInput,
   dependencies: ExecuteIssueAttemptDependencies = {}
 ): Promise<ExecuteIssueAttemptResult> {
+  const logging = resolveExecutionLoggingConfig(input.logging);
+  const includeVerboseData = shouldIncludeVerboseTerminalData(
+    logging.verbosity
+  );
+  const logger = createLogger({
+    correlationIds: {
+      issueNumber: input.issueNumber
+    },
+    minLevel: toTerminalLogLevel(logging.verbosity),
+    source: 'execution/issue-executor'
+  });
   const cleanup = dependencies.cleanup ?? cleanupWorktree;
   const createReserved = dependencies.createReserved ?? createReservedWorktree;
   const findActiveWorktree = dependencies.findActiveWorktree ?? findActiveWorktreeForIssue;
@@ -402,6 +461,20 @@ export async function executeIssueAttempt(
   const env = process.env;
   const issue = await getGitHubIssue(input.issueNumber);
   const classification = classifyIssue(issue as never);
+  logger.info({
+    eventName: 'issue-executor.issue.loaded',
+    message: 'Loaded issue and classification for execution.',
+    data: {
+      kind: classification.kind,
+      state: classification.state,
+      ...(includeVerboseData
+        ? {
+            labels: classification.currentLabels,
+            surfaces: classification.surfaces
+          }
+        : {})
+    }
+  });
   const plannerOutput = await planner({
     attemptId: undefined,
     body: issue.body ?? undefined,
@@ -410,13 +483,41 @@ export async function executeIssueAttempt(
     labels: classification.currentLabels,
     title: issue.title
   });
+  logger.info({
+    eventName: 'issue-executor.planner.completed',
+    message: 'Planner completed for the selected issue.',
+    data: {
+      objective: plannerOutput.objective,
+      recommendedApproach: plannerOutput.recommendedApproach,
+      riskLevel: plannerOutput.riskLevel,
+      ...(includeVerboseData
+        ? {
+            acceptanceCriteria: plannerOutput.acceptanceCriteria,
+            capabilityTags: plannerOutput.capabilityTags,
+            relevantSurfaces: plannerOutput.relevantSurfaces
+          }
+        : {})
+    }
+  });
 
   if (plannerOutput.recommendedApproach === 'reject') {
+    logger.info({
+      eventName: 'issue-executor.issue.rejected',
+      message: 'Planner rejected the issue before execution.',
+      data: {
+        reasoningSummary: plannerOutput.reasoningSummary
+      }
+    });
     const rejectResult = await reject(issue.number, {
       status: plannerOutput.reasoningSummary,
       whatChanged: ['Planner determined the issue should not proceed.']
     });
-    await syncLocalIssueState(issue.number, rejectResult.stateTransition, updateIssue);
+    await syncLocalIssueState(
+      issue.number,
+      rejectResult.stateTransition,
+      updateIssue,
+      logger
+    );
 
     return {
       issueNumber: issue.number,
@@ -425,11 +526,23 @@ export async function executeIssueAttempt(
   }
 
   if (plannerOutput.recommendedApproach === 'defer') {
+    logger.info({
+      eventName: 'issue-executor.issue.deferred',
+      message: 'Planner deferred the issue before execution.',
+      data: {
+        reasoningSummary: plannerOutput.reasoningSummary
+      }
+    });
     const deferResult = await defer(issue.number, {
       status: plannerOutput.reasoningSummary,
       whatChanged: ['Planner deferred this issue for a later execution window.']
     });
-    await syncLocalIssueState(issue.number, deferResult.stateTransition, updateIssue);
+    await syncLocalIssueState(
+      issue.number,
+      deferResult.stateTransition,
+      updateIssue,
+      logger
+    );
 
     return {
       issueNumber: issue.number,
@@ -439,7 +552,7 @@ export async function executeIssueAttempt(
 
   const selectedState = await transitionState(issue.number, 'SELECTED');
 
-  await syncLocalIssueState(issue.number, selectedState, updateIssue);
+  await syncLocalIssueState(issue.number, selectedState, updateIssue, logger);
   await writeComment(issue.number, {
     commentKind: 'work-started',
     evidence: [
@@ -456,11 +569,31 @@ export async function executeIssueAttempt(
 
   const inProgressState = await transitionState(issue.number, 'IN_PROGRESS');
 
-  await syncLocalIssueState(issue.number, inProgressState, updateIssue);
+  await syncLocalIssueState(
+    issue.number,
+    inProgressState,
+    updateIssue,
+    logger
+  );
+  logger.info({
+    eventName: 'issue-executor.execution.started',
+    message: 'Issue moved into active execution.',
+    data: {
+      objective: plannerOutput.objective,
+      approach: plannerOutput.recommendedApproach
+    }
+  });
 
   const activeWorktree = await findActiveWorktree(issue.number);
 
   if (activeWorktree) {
+    logger.info({
+      correlationIds: {
+        worktreeId: activeWorktree.id
+      },
+      eventName: 'issue-executor.execution.skipped',
+      message: 'Issue already has an active worktree, so execution was skipped.'
+    });
     return {
       issueNumber: issue.number,
       outcome: 'skipped',
@@ -473,6 +606,21 @@ export async function executeIssueAttempt(
     issueNumber: issue.number,
     issueTitle: issue.title,
     worktreesRoot: input.worktreesRoot
+  });
+  logger.info({
+    correlationIds: {
+      worktreeId: reservedWorktree.worktree.id
+    },
+    eventName: 'issue-executor.worktree.reserved',
+    message: 'Reserved a worktree for issue execution.',
+    data: {
+      branchName: reservedWorktree.branchName,
+      ...(includeVerboseData
+        ? {
+            filesystemPath: reservedWorktree.filesystemPath
+          }
+        : {})
+    }
   });
 
   await updateIssue({
@@ -497,6 +645,13 @@ export async function executeIssueAttempt(
     await createReserved({
       worktreeId: reservedWorktree.worktree.id
     });
+    logger.info({
+      correlationIds: {
+        worktreeId: reservedWorktree.worktree.id
+      },
+      eventName: 'issue-executor.worktree.created',
+      message: 'Created the reserved worktree on disk.'
+    });
   } catch (error) {
     await handleBlocker({
       error,
@@ -515,6 +670,43 @@ export async function executeIssueAttempt(
     hydratedWorktree = await hydrate({
       worktreeId: reservedWorktree.worktree.id
     });
+    logger.info({
+      correlationIds: {
+        attemptId: hydratedWorktree.attemptId,
+        worktreeId: reservedWorktree.worktree.id
+      },
+      eventName: 'issue-executor.worktree.hydrated',
+      message: 'Hydrated the worktree and prepared the execution environment.',
+      data: {
+        installPerformed: hydratedWorktree.installPerformed,
+        branchName: reservedWorktree.branchName
+      }
+    });
+    await writeVerboseProgressComment(
+      issue.number,
+      {
+        evidence: [
+          `worktree-id=${reservedWorktree.worktree.id}`,
+          `attempt-id=${hydratedWorktree.attemptId}`,
+          `branch=${reservedWorktree.branchName}`
+        ],
+        nextStep: 'Run the builder and begin the evaluation loop.',
+        status:
+          'The execution environment is ready and the runtime is starting implementation.',
+        title: 'Execution Environment Ready',
+        whatChanged: [
+          `Reserved branch ${reservedWorktree.branchName}.`,
+          hydratedWorktree.installPerformed
+            ? 'Dependencies were installed and the environment fingerprint was recorded.'
+            : 'Environment verification completed without needing a fresh install.'
+        ]
+      },
+      {
+        logger,
+        logging,
+        writeComment
+      }
+    );
   } catch (error) {
     await handleBlocker({
       error,
@@ -534,6 +726,19 @@ export async function executeIssueAttempt(
   const capability = resolveCapability(classification.currentLabels, plannerOutput);
 
   for (let repairAttempt = 0; repairAttempt <= maxRepairAttempts; repairAttempt += 1) {
+    logger.info({
+      correlationIds: {
+        attemptId: hydratedWorktree.attemptId,
+        worktreeId: reservedWorktree.worktree.id
+      },
+      eventName: 'issue-executor.builder.attempt.started',
+      message: 'Starting a builder attempt.',
+      data: {
+        attemptNumber: repairAttempt + 1,
+        totalAttempts: maxRepairAttempts + 1,
+        mode: criticResult ? 'repair' : 'initial'
+      }
+    });
     builderResult = await builder({
       attemptId: hydratedWorktree.attemptId,
       body: issue.body ?? undefined,
@@ -550,6 +755,46 @@ export async function executeIssueAttempt(
       id: hydratedWorktree.attemptId,
       summary: builderResult.builderOutput.summary
     });
+    logger.info({
+      correlationIds: {
+        attemptId: hydratedWorktree.attemptId,
+        worktreeId: reservedWorktree.worktree.id
+      },
+      eventName: 'issue-executor.builder.attempt.completed',
+      message: 'Builder attempt completed and produced changes for evaluation.',
+      data: {
+        attemptNumber: repairAttempt + 1,
+        changedFileCount: builderResult.builderOutput.filesActuallyChanged.length,
+        summary: builderResult.builderOutput.summary,
+        ...(includeVerboseData
+          ? {
+              changedFiles: builderResult.builderOutput.filesActuallyChanged
+            }
+          : {})
+      }
+    });
+    await writeVerboseProgressComment(
+      issue.number,
+      {
+        evidence: builderResult.builderOutput.filesActuallyChanged
+          .slice(0, 5)
+          .map((filePath) => `changed=${filePath}`),
+        nextStep:
+          'Run the evaluation plan and collect validation evidence for this attempt.',
+        status:
+          'The builder finished applying changes and the runtime is moving into evaluation.',
+        title: `Builder Attempt ${String(repairAttempt + 1)} Completed`,
+        whatChanged: [
+          builderResult.builderOutput.summary,
+          `Changed ${String(builderResult.builderOutput.filesActuallyChanged.length)} file(s).`
+        ]
+      },
+      {
+        logger,
+        logging,
+        writeComment
+      }
+    );
     await updateWorktree({
       id: reservedWorktree.worktree.id,
       status: 'AWAITING_EVAL'
@@ -557,7 +802,23 @@ export async function executeIssueAttempt(
 
     const awaitingEvalState = await transitionState(issue.number, 'AWAITING_EVAL');
 
-    await syncLocalIssueState(issue.number, awaitingEvalState, updateIssue);
+    await syncLocalIssueState(
+      issue.number,
+      awaitingEvalState,
+      updateIssue,
+      logger
+    );
+    logger.info({
+      correlationIds: {
+        attemptId: hydratedWorktree.attemptId,
+        worktreeId: reservedWorktree.worktree.id
+      },
+      eventName: 'issue-executor.evaluation.started',
+      message: 'Starting evaluation for the current builder attempt.',
+      data: {
+        attemptNumber: repairAttempt + 1
+      }
+    });
 
     evaluationResult = await evaluationRunner({
       acceptanceCriteria: plannerOutput.acceptanceCriteria,
@@ -587,6 +848,26 @@ export async function executeIssueAttempt(
       id: hydratedWorktree.attemptId,
       outcome: mapEvaluatorOutputToAttemptOutcome(evaluationResult),
       summary: evaluationResult.evaluatorOutput.summary
+    });
+    logger.info({
+      correlationIds: {
+        attemptId: hydratedWorktree.attemptId,
+        worktreeId: reservedWorktree.worktree.id
+      },
+      eventName: 'issue-executor.evaluation.completed',
+      message: 'Evaluation completed for the current builder attempt.',
+      data: {
+        attemptNumber: repairAttempt + 1,
+        outcome: evaluationResult.evaluatorOutput.outcome,
+        regressionRisk: evaluationResult.evaluatorOutput.regressionRisk,
+        shouldOpenPR: evaluationResult.evaluatorOutput.shouldOpenPR,
+        checks: summarizeCheckResults(evaluationResult),
+        ...(includeVerboseData
+          ? {
+              observedFailures: evaluationResult.observedFailures
+            }
+          : {})
+      }
     });
 
     if (
@@ -633,7 +914,20 @@ export async function executeIssueAttempt(
 
       const doneState = await transitionState(issue.number, 'DONE');
 
-      await syncLocalIssueState(issue.number, doneState, updateIssue);
+      await syncLocalIssueState(issue.number, doneState, updateIssue, logger);
+      logger.info({
+        correlationIds: {
+          attemptId: hydratedWorktree.attemptId,
+          worktreeId: reservedWorktree.worktree.id
+        },
+        eventName: 'issue-executor.pull-request.ready',
+        message: 'Opened or updated a pull request for the completed issue.',
+        data: {
+          evaluationStatus,
+          pullRequestNumber: pullRequest.pullRequestNumber,
+          branchName: reservedWorktree.branchName
+        }
+      });
 
       const issueSummary = [
         `Issue #${String(issue.number)} completed in worktree ${reservedWorktree.worktree.id}.`,
@@ -708,6 +1002,25 @@ export async function executeIssueAttempt(
       objective: plannerOutput.objective,
       observedFailures: evaluationResult.observedFailures
     });
+    logger.warn({
+      correlationIds: {
+        attemptId: hydratedWorktree.attemptId,
+        worktreeId: reservedWorktree.worktree.id
+      },
+      eventName: 'issue-executor.critic.completed',
+      message: 'Evaluation did not pass, so the critic produced next-step guidance.',
+      data: {
+        recommendedNextAction: criticResult.recommendedNextAction,
+        isSystemic: criticResult.isSystemic,
+        mutationRecommended: criticResult.mutationRecommended,
+        ...(includeVerboseData
+          ? {
+              notes: criticResult.notes,
+              primarySymptoms: criticResult.primarySymptoms
+            }
+          : {})
+      }
+    });
 
     const failureFollowup = await processFailureMemory({
       attemptId: hydratedWorktree.attemptId,
@@ -719,15 +1032,67 @@ export async function executeIssueAttempt(
     });
 
     failureReflection = failureFollowup.reflection;
+    logger.warn({
+      correlationIds: {
+        attemptId: hydratedWorktree.attemptId,
+        worktreeId: reservedWorktree.worktree.id
+      },
+      eventName: 'issue-executor.failure-followup.completed',
+      message: 'Failure memory and follow-up work were recorded for the failed attempt.',
+      data: {
+        createdFailureIssueNumber: failureFollowup.createdFailureIssueNumber,
+        createdMutationIssueNumber: failureFollowup.createdMutationIssueNumber,
+        failureRecordId: failureFollowup.failureRecordId,
+        recurrenceCount: failureFollowup.recurrenceCount,
+        recurrenceGroup: failureFollowup.recurrenceGroup,
+        strategy: failureFollowup.strategy
+      }
+    });
 
     if (repairAttempt < maxRepairAttempts && failureFollowup.strategy === 'direct-fix') {
       const retryState = await transitionState(issue.number, 'IN_PROGRESS');
 
-      await syncLocalIssueState(issue.number, retryState, updateIssue);
+      await syncLocalIssueState(issue.number, retryState, updateIssue, logger);
       await updateWorktree({
         id: reservedWorktree.worktree.id,
         status: 'ACTIVE'
       });
+      logger.info({
+        correlationIds: {
+          attemptId: hydratedWorktree.attemptId,
+          worktreeId: reservedWorktree.worktree.id
+        },
+        eventName: 'issue-executor.retry.scheduled',
+        message: 'Scheduling another builder attempt using a direct-fix strategy.',
+        data: {
+          nextAttemptNumber: repairAttempt + 2,
+          remainingAttempts: maxRepairAttempts - repairAttempt,
+          strategy: failureFollowup.strategy
+        }
+      });
+      await writeVerboseProgressComment(
+        issue.number,
+        {
+          evidence: [
+            ...evaluationResult.observedFailures.slice(0, 5),
+            `strategy=${failureFollowup.strategy}`
+          ],
+          nextStep:
+            'Run another builder pass, then repeat the evaluation plan.',
+          status:
+            'The last attempt failed evaluation, and the runtime is applying a direct-fix repair pass.',
+          title: `Retrying After Attempt ${String(repairAttempt + 1)}`,
+          whatChanged: [
+            evaluationResult.evaluatorOutput.summary,
+            criticResult.notes[0] ?? 'The critic requested another direct repair attempt.'
+          ]
+        },
+        {
+          logger,
+          logging,
+          writeComment
+        }
+      );
       continue;
     }
 
@@ -737,7 +1102,12 @@ export async function executeIssueAttempt(
     );
     const failureTransition = await transitionState(issue.number, failureState);
 
-    await syncLocalIssueState(issue.number, failureTransition, updateIssue);
+    await syncLocalIssueState(
+      issue.number,
+      failureTransition,
+      updateIssue,
+      logger
+    );
 
     const failureSummary = [
       `Issue #${String(issue.number)} failed after ${String(repairAttempt + 1)} builder/evaluator cycle(s).`,
@@ -794,6 +1164,20 @@ export async function executeIssueAttempt(
     await updateWorktree({
       id: reservedWorktree.worktree.id,
       status: 'FAILED'
+    });
+    logger.warn({
+      correlationIds: {
+        attemptId: hydratedWorktree.attemptId,
+        worktreeId: reservedWorktree.worktree.id
+      },
+      eventName: 'issue-executor.execution.failed',
+      message: 'Issue execution ended without a pull request.',
+      data: {
+        artifactManifestPath,
+        finalState: failureState,
+        outcome:
+          failureState === 'DEFERRED' ? 'deferred' : 'failed'
+      }
     });
     await cleanup({
       artifactManifestPath,

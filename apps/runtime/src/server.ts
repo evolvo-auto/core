@@ -21,6 +21,9 @@ const runtimeLoop = createRuntimeLoop({
   baseRef: workerConfig.baseRef,
   gitRemote: workerConfig.gitRemote,
   intervalMs: workerConfig.loopIntervalMs,
+  logging: {
+    verbosity: workerConfig.logVerbosity
+  },
   maxRepairAttempts: workerConfig.maxRepairAttempts,
   smokeContract:
     workerConfig.smokeBaseUrl || workerConfig.smokeUsePlaywright
@@ -38,7 +41,7 @@ const server = createRuntimeServer(new Date(), () => runtimeLoop.getStatus());
 server.listen(port, host, () => {
   runtimeLoop.start();
   process.stdout.write(
-    `@evolvo/runtime listening on http://${host}:${String(port)}\n`
+    `@evolvo/runtime listening on http://${host}:${String(port)} (verbosity=${workerConfig.logVerbosity})\n`
   );
 });
 

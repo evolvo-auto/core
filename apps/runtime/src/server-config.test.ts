@@ -28,6 +28,7 @@ describe('getRuntimeServerConfig', () => {
         DASHBOARD_PORT: '3000',
         RUNTIME_BASE_REF: 'develop',
         RUNTIME_GIT_REMOTE: 'upstream',
+        RUNTIME_LOG_VERBOSITY: 'verbose',
         RUNTIME_LOOP_INTERVAL_MS: '15000',
         RUNTIME_MAX_REPAIR_ATTEMPTS: '4',
         RUNTIME_SMOKE_BASE_URL: 'http://127.0.0.1:3400',
@@ -38,10 +39,25 @@ describe('getRuntimeServerConfig', () => {
       baseRef: 'develop',
       gitRemote: 'upstream',
       loopIntervalMs: 15000,
+      logVerbosity: 'verbose',
       maxRepairAttempts: 4,
       smokeBaseUrl: 'http://127.0.0.1:3400',
       smokeUsePlaywright: true,
       worktreesRoot: '/tmp/worktrees'
     });
+  });
+
+  it('defaults runtime log verbosity to normal and validates supported values', () => {
+    expect(
+      getRuntimeWorkerConfig({
+        DASHBOARD_PORT: '3000'
+      }).logVerbosity
+    ).toBe('normal');
+
+    expect(() =>
+      getRuntimeWorkerConfig({
+        RUNTIME_LOG_VERBOSITY: 'loud'
+      })
+    ).toThrow(/RUNTIME_LOG_VERBOSITY/);
   });
 });
