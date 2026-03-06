@@ -19,6 +19,7 @@ import { runCriticRole } from '@evolvo/orchestration/critic-role';
 import { runPlannerRole } from '@evolvo/orchestration/planner-role';
 import type {
   CriticOutput,
+  FailureReflection,
   PlannerOutput
 } from '@evolvo/schemas/role-output-schemas';
 import {
@@ -41,6 +42,9 @@ import {
 } from '@evolvo/worktrees/reservation';
 
 import { runBuilderOrchestration, type RunBuilderOrchestrationResult } from './builder-orchestration.js';
+import {
+  processFailureFollowup
+} from './failure-followup.js';
 import {
   buildIssueCommitMessage,
   commitAndPushWorktree
@@ -89,6 +93,7 @@ export type ExecuteIssueAttemptDependencies = {
   critic?: typeof runCriticRole;
   reserve?: typeof reserveWorktree;
   persistArtifacts?: typeof persistWorktreeArtifacts;
+  processFailureMemory?: typeof processFailureFollowup;
   pushAndCommit?: typeof commitAndPushWorktree;
   reject?: typeof rejectIssue;
   defer?: typeof deferIssue;
@@ -266,6 +271,7 @@ function buildArtifactSet(input: {
   builderResult?: RunBuilderOrchestrationResult;
   criticResult?: CriticOutput;
   evaluationResult?: RunEvaluationResult;
+  failureReflection?: FailureReflection;
   summary: string;
 }) {
   const artifacts: Array<{
@@ -296,10 +302,10 @@ function buildArtifactSet(input: {
     });
   }
 
-  if (input.criticResult) {
+  if (input.failureReflection || input.criticResult) {
     artifacts.push({
       artifactType: 'failure-reflection',
-      content: `${JSON.stringify(input.criticResult, null, 2)}\n`,
+      content: `${JSON.stringify(input.failureReflection ?? input.criticResult, null, 2)}\n`,
       fileName: 'failure-reflection.json'
     });
   }
@@ -329,12 +335,24 @@ async function syncLocalIssueState(
   });
 }
 
-function buildFailureState(criticResult: CriticOutput | undefined): IssueWorkflowState {
+function buildFailureState(
+  criticResult: CriticOutput | undefined,
+  strategy:
+    | 'defer'
+    | 'direct-fix'
+    | 'failure-followup'
+    | 'mutation-first'
+    | 'stop'
+): IssueWorkflowState {
   if (!criticResult) {
     return 'BLOCKED';
   }
 
-  if (criticResult.recommendedNextAction === 'defer') {
+  if (
+    criticResult.recommendedNextAction === 'defer' ||
+    strategy === 'defer' ||
+    strategy === 'mutation-first'
+  ) {
     return 'DEFERRED';
   }
 
@@ -362,6 +380,8 @@ export async function executeIssueAttempt(
   const reserve = dependencies.reserve ?? reserveWorktree;
   const persistArtifacts =
     dependencies.persistArtifacts ?? persistWorktreeArtifacts;
+  const processFailureMemory =
+    dependencies.processFailureMemory ?? processFailureFollowup;
   const pushAndCommit = dependencies.pushAndCommit ?? commitAndPushWorktree;
   const reject = dependencies.reject ?? rejectIssue;
   const defer = dependencies.defer ?? deferIssue;
@@ -508,6 +528,7 @@ export async function executeIssueAttempt(
   let builderResult: RunBuilderOrchestrationResult | undefined;
   let evaluationResult: RunEvaluationResult | undefined;
   let criticResult: CriticOutput | undefined;
+  let failureReflection: FailureReflection | undefined;
   let artifactManifestPath: string | undefined;
   const maxRepairAttempts = Math.max(0, input.maxRepairAttempts ?? 2);
   const capability = resolveCapability(classification.currentLabels, plannerOutput);
@@ -688,7 +709,18 @@ export async function executeIssueAttempt(
       observedFailures: evaluationResult.observedFailures
     });
 
-    if (repairAttempt < maxRepairAttempts && criticResult.directFixRecommended) {
+    const failureFollowup = await processFailureMemory({
+      attemptId: hydratedWorktree.attemptId,
+      capabilityKey: criticResult.isSystemic ? 'debugging' : capability,
+      criticOutput: criticResult,
+      issueNumber: issue.number,
+      observedFailures: evaluationResult.observedFailures,
+      plannerOutput
+    });
+
+    failureReflection = failureFollowup.reflection;
+
+    if (repairAttempt < maxRepairAttempts && failureFollowup.strategy === 'direct-fix') {
       const retryState = await transitionState(issue.number, 'IN_PROGRESS');
 
       await syncLocalIssueState(issue.number, retryState, updateIssue);
@@ -699,7 +731,10 @@ export async function executeIssueAttempt(
       continue;
     }
 
-    const failureState = buildFailureState(criticResult);
+    const failureState = buildFailureState(
+      criticResult,
+      failureFollowup.strategy
+    );
     const failureTransition = await transitionState(issue.number, failureState);
 
     await syncLocalIssueState(issue.number, failureTransition, updateIssue);
@@ -707,6 +742,15 @@ export async function executeIssueAttempt(
     const failureSummary = [
       `Issue #${String(issue.number)} failed after ${String(repairAttempt + 1)} builder/evaluator cycle(s).`,
       evaluationResult.evaluatorOutput.summary,
+      `Failure memory recorded as ${failureFollowup.failureRecordId}.`,
+      `Recurrence group: ${failureFollowup.recurrenceGroup} (${String(failureFollowup.recurrenceCount)} occurrence(s)).`,
+      failureFollowup.createdFailureIssueNumber
+        ? `Failure issue #${String(failureFollowup.createdFailureIssueNumber)} was created.`
+        : '',
+      failureFollowup.createdMutationIssueNumber
+        ? `Mutation issue #${String(failureFollowup.createdMutationIssueNumber)} was created.`
+        : '',
+      ...failureFollowup.followupErrors,
       criticResult.notes.join('\n')
     ]
       .filter((line) => line.trim().length > 0)
@@ -714,15 +758,22 @@ export async function executeIssueAttempt(
 
     await writeComment(issue.number, {
       commentKind: 'evaluation-result',
-      evidence: evaluationResult.observedFailures,
-      nextStep:
-        criticResult.recommendedNextAction === 'defer'
-          ? 'Revisit this issue when more context or capacity is available.'
-          : 'Investigate the failure evidence before retrying.',
+      evidence: [
+        ...evaluationResult.observedFailures,
+        `recurrence-group=${failureFollowup.recurrenceGroup}`,
+        ...failureFollowup.followupErrors
+      ],
+      nextStep: failureFollowup.createdMutationIssueNumber
+        ? `Review mutation issue #${String(failureFollowup.createdMutationIssueNumber)} before retrying this work.`
+        : failureFollowup.createdFailureIssueNumber
+          ? `Review failure issue #${String(failureFollowup.createdFailureIssueNumber)} and decide the next repair step.`
+          : criticResult.recommendedNextAction === 'defer'
+            ? 'Revisit this issue when more context or capacity is available.'
+            : 'Investigate the failure evidence before retrying.',
       status: evaluationResult.evaluatorOutput.summary,
       whatChanged: [
         builderResult.builderOutput.summary,
-        `The runtime concluded with critic action "${criticResult.recommendedNextAction}".`
+        `The runtime concluded with critic action "${criticResult.recommendedNextAction}" and failure strategy "${failureFollowup.strategy}".`
       ]
     });
 
@@ -731,6 +782,7 @@ export async function executeIssueAttempt(
         builderResult,
         criticResult,
         evaluationResult,
+        failureReflection,
         summary: failureSummary
       }),
       attemptId: hydratedWorktree.attemptId,

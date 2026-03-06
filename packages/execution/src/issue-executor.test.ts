@@ -190,4 +190,153 @@ describe('executeIssueAttempt', () => {
       worktreeId: 'wt_801'
     });
   });
+
+  it('records failure follow-up data and defers when mutation-first strategy wins', async () => {
+    const result = await executeIssueAttempt(
+      {
+        issueNumber: 801,
+        maxRepairAttempts: 1
+      },
+      {
+        builder: vi.fn().mockResolvedValue({
+          builderOutput: {
+            believesReadyForEvaluation: true,
+            commandsSuggested: [],
+            filesActuallyChanged: ['packages/execution/src/runtime-loop.ts'],
+            filesIntendedToChange: ['packages/execution/src/runtime-loop.ts'],
+            implementationNotes: ['Added loop wiring.'],
+            issueNumber: 801,
+            possibleKnownRisks: [],
+            summary: 'Implemented the runtime loop.'
+          },
+          diffSummary: '1 file changed',
+          intendedOnlyFiles: [],
+          patchPath: '/repo/worktree/.evolvo/builder.patch',
+          unexpectedChangedFiles: []
+        }),
+        cleanup: vi.fn().mockResolvedValue(undefined),
+        createReserved: vi.fn().mockResolvedValue(undefined),
+        critic: vi.fn().mockResolvedValue({
+          completionAssessment: 'failed',
+          directFixRecommended: false,
+          isSystemic: true,
+          issueNumber: 801,
+          likelyRootCauses: [
+            {
+              cause: 'The repair loop is under-specified.',
+              confidence: 86
+            }
+          ],
+          mutationRecommended: true,
+          notes: ['Repeated across several issues.'],
+          outcome: 'failure',
+          primarySymptoms: ['Schema validation failed'],
+          recommendedNextAction: 'open-mutation'
+        }),
+        evaluationRunner: vi.fn().mockResolvedValue({
+          checkResults: [],
+          evaluatorOutput: {
+            checks: {
+              build: 'failed',
+              install: 'passed',
+              lint: 'passed',
+              run: 'skipped',
+              smoke: 'skipped',
+              tests: 'failed',
+              typecheck: 'passed'
+            },
+            extraChecks: [],
+            issueNumber: 801,
+            outcome: 'failure',
+            regressionRisk: 'medium',
+            shouldMergeIfPRExists: false,
+            shouldOpenPR: false,
+            summary: 'Tests failed.'
+          },
+          observedFailures: ['Schema validation failed']
+        }),
+        findActiveWorktree: vi.fn().mockResolvedValue(null),
+        getGitHubIssue: vi.fn().mockResolvedValue({
+          body: 'Please implement the runtime loop.',
+          labels: ['kind:feature', 'source:human', 'state:triage'],
+          number: 801,
+          title: 'Implement runtime loop'
+        }),
+        hydrate: vi.fn().mockResolvedValue({
+          attemptId: 'att_801',
+          attemptJournalPath: '/repo/worktree/.evolvo/attempt-journal.json',
+          environmentFingerprintPath: '/repo/worktree/.evolvo/environment-fingerprint.json',
+          installPerformed: true,
+          worktree: {
+            id: 'wt_801'
+          }
+        }),
+        persistArtifacts: vi.fn().mockResolvedValue({
+          manifestPath: '/repo/.artifacts/worktrees/wt_801/attempts/att_801/manifest.json'
+        }),
+        planner: vi.fn().mockResolvedValue(plannerOutput),
+        processFailureMemory: vi.fn().mockResolvedValue({
+          capabilitySnapshot: {
+            attempts: 3,
+            capabilityKey: 'typescript',
+            confidenceScore: 38,
+            failures: 2,
+            lastIssueNumber: 801,
+            recurringFailureModes: ['model-quality/runtime/openai'],
+            successes: 1
+          },
+          createdFailureIssueNumber: 91,
+          createdMutationIssueNumber: 92,
+          failureRecordId: 'failure_801',
+          followupErrors: [],
+          mutationProposalId: 'mutation_801',
+          recurrenceCount: 3,
+          recurrenceGroup: 'model-quality/runtime/openai',
+          reflection: {
+            attemptId: 'att_801',
+            immediateFollowups: [],
+            issueNumber: 801,
+            localVsSystemic: 'systemic',
+            likelyRootCauses: [
+              {
+                cause: 'The repair loop is under-specified.',
+                confidence: 86
+              }
+            ],
+            phase: 'runtime',
+            recurrenceHints: [],
+            shouldCreateFailureIssue: true,
+            shouldCreateMutationIssue: true,
+            symptom: 'Schema validation failed'
+          },
+          strategy: 'mutation-first'
+        }),
+        reserve: vi.fn().mockResolvedValue({
+          branchName: 'issue/801-runtime-loop',
+          filesystemPath: '/repo/worktree',
+          worktree: {
+            id: 'wt_801'
+          }
+        }),
+        syncIssueEvalLabel: vi.fn().mockResolvedValue(undefined),
+        transitionState: vi.fn().mockResolvedValue({
+          nextLabels: ['state:deferred'],
+          nextState: 'DEFERRED'
+        }),
+        updateAttempt: vi.fn().mockResolvedValue(undefined),
+        updateIssue: vi.fn().mockResolvedValue(undefined),
+        updateWorktree: vi.fn().mockResolvedValue(undefined),
+        writeComment: vi.fn().mockResolvedValue(undefined)
+      }
+    );
+
+    expect(result).toEqual({
+      artifactManifestPath:
+        '/repo/.artifacts/worktrees/wt_801/attempts/att_801/manifest.json',
+      attemptId: 'att_801',
+      issueNumber: 801,
+      outcome: 'deferred',
+      worktreeId: 'wt_801'
+    });
+  });
 });

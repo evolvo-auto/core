@@ -13,6 +13,12 @@ describe('createRuntimeLoop', () => {
           issueNumber: 901,
           outcome: 'completed'
         }),
+        listFailures: vi.fn().mockResolvedValue([
+          {
+            isSystemic: true,
+            issueNumber: 901
+          }
+        ]),
         listIssues: vi.fn().mockResolvedValue([
           {
             githubIssueNumber: 901,
@@ -57,6 +63,7 @@ describe('createRuntimeLoop', () => {
         intervalMs: 1000
       },
       {
+        listFailures: vi.fn().mockResolvedValue([]),
         syncIssues: vi.fn().mockRejectedValue(new Error('GitHub unavailable'))
       }
     );

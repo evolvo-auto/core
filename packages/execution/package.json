@@ -6,6 +6,7 @@
   "exports": {
     "./builder-orchestration": "./src/builder-orchestration.ts",
     "./changed-files": "./src/changed-files.ts",
+    "./failure-followup": "./src/failure-followup.ts",
     "./git-operations": "./src/git-operations.ts",
     "./issue-executor": "./src/issue-executor.ts",
     "./repository-context": "./src/repository-context.ts",
@@ -23,8 +24,11 @@
     "@evolvo/core": "workspace:*",
     "@evolvo/evaluation": "workspace:*",
     "@evolvo/github": "workspace:*",
+    "@evolvo/memory": "workspace:*",
+    "@evolvo/mutation-engine": "workspace:*",
     "@evolvo/observability": "workspace:*",
     "@evolvo/orchestration": "workspace:*",
+    "@evolvo/scoring": "workspace:*",
     "@evolvo/schemas": "workspace:*",
     "@evolvo/worktrees": "workspace:*",
     "zod": "^4.1.5"
