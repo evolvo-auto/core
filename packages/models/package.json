@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./model-routing-resolver": "./src/model-routing-resolver.ts",
     "./model-provider": "./src/model-provider.ts",
     "./ollama-provider": "./src/ollama-provider.ts",
     "./openai-provider": "./src/openai-provider.ts"
