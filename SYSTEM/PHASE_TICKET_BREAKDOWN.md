@@ -282,6 +282,10 @@ one issue → one worktree → one execution journal.
 
 ### P3-001 Implement branch naming strategy
 
+Status: done
+Branch: `feature/P3-001-implement-branch-naming-strategy`
+PR: `#27`
+
 Deterministic issue-to-branch naming.
 
 ### P3-002 Implement worktree reservation

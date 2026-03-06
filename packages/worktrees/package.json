@@ -1,0 +1,19 @@
+{
+  "name": "@evolvo/worktrees",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./branch-name": "./src/branch-name.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "clean": "git clean -fdX .",
+    "lint": "eslint . --max-warnings 0 --no-error-on-unmatched-pattern",
+    "test": "vitest run --root . --config ../../vitest.config.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@evolvo/typescript-config": "workspace:*"
+  }
+}
