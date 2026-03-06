@@ -4,6 +4,7 @@ Shared packages for Evolvo's runtime, orchestration, evaluation, and supporting 
 
 Planned packages:
 
+- `api`
 - `benchmarks`
 - `challenges`
 - `core`
