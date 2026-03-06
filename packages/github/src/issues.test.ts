@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   addIssueLabels,
+  createRepositoryIssue,
   getIssue,
   listRepositoryIssues,
   removeIssueLabel,
@@ -16,6 +17,42 @@ import type {
 } from './types.js';
 
 describe('GitHub issue operations', () => {
+  it('creates a repository issue with labels', async () => {
+    const issue = { number: 33 } as GitHubIssue;
+    const create = vi.fn().mockResolvedValue({ data: issue });
+    const context: GitHubContext = {
+      octokit: {
+        rest: {
+          issues: {
+            create
+          }
+        }
+      } as unknown as GitHubRestClient,
+      repository: {
+        owner: 'evolvo-auto',
+        repo: 'core'
+      }
+    };
+
+    expect(
+      await createRepositoryIssue(
+        {
+          body: 'Follow-up from issue #14',
+          labels: ['source:evolvo', 'kind:failure'],
+          title: 'Failure: repeated schema validation'
+        },
+        context
+      )
+    ).toBe(issue);
+    expect(create).toHaveBeenCalledWith({
+      body: 'Follow-up from issue #14',
+      labels: ['source:evolvo', 'kind:failure'],
+      owner: 'evolvo-auto',
+      repo: 'core',
+      title: 'Failure: repeated schema validation'
+    });
+  });
+
   it('gets a single issue by number', async () => {
     const issue = { number: 42 } as GitHubIssue;
     const get = vi.fn().mockResolvedValue({ data: issue });

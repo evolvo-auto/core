@@ -1,3 +1,8 @@
+import {
+  parseRuntimeLogVerbosity,
+  type RuntimeLogVerbosity
+} from '@evolvo/execution/logging-policy';
+
 export type RuntimeServerConfig = {
   host: string;
   port: number;
@@ -7,6 +12,7 @@ export type RuntimeWorkerConfig = {
   baseRef: string;
   gitRemote: string;
   loopIntervalMs: number;
+  logVerbosity: RuntimeLogVerbosity;
   maxRepairAttempts: number;
   smokeBaseUrl?: string;
   smokeUsePlaywright: boolean;
@@ -85,6 +91,7 @@ export function getRuntimeWorkerConfig(
       'RUNTIME_LOOP_INTERVAL_MS',
       60_000
     ),
+    logVerbosity: parseRuntimeLogVerbosity(env.RUNTIME_LOG_VERBOSITY),
     maxRepairAttempts: parseNonNegativeInteger(
       env.RUNTIME_MAX_REPAIR_ATTEMPTS,
       'RUNTIME_MAX_REPAIR_ATTEMPTS',

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./failure-memory": "./src/failure-memory.ts",
     "./getQueryClient": "./src/getQueryClient.ts",
     "./health": "./src/health.ts",
     "./worktrees": "./src/worktrees.ts"

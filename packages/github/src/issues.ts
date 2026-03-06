@@ -1,11 +1,26 @@
 import { getGitHubContext } from './auth.js';
 import type {
+  CreateRepositoryIssueInput,
   GitHubContext,
   GitHubIssue,
   GitHubIssueLabelMutationResult,
   GitHubIssueListItem,
   ListRepositoryIssuesOptions
 } from './types.js';
+
+export async function createRepositoryIssue(
+  input: CreateRepositoryIssueInput,
+  context: GitHubContext = getGitHubContext()
+): Promise<GitHubIssue> {
+  const { data } = await context.octokit.rest.issues.create({
+    ...context.repository,
+    body: input.body,
+    labels: input.labels,
+    title: input.title
+  });
+
+  return data;
+}
 
 export async function getIssue(
   issueNumber: number,

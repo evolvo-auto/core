@@ -50,6 +50,9 @@ importers:
       '@evolvo/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@evolvo/memory':
+        specifier: workspace:*
+        version: link:../../packages/memory
       '@evolvo/query':
         specifier: workspace:*
         version: link:../../packages/query
@@ -221,6 +224,12 @@ importers:
       '@evolvo/github':
         specifier: workspace:*
         version: link:../github
+      '@evolvo/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@evolvo/mutation-engine':
+        specifier: workspace:*
+        version: link:../mutation-engine
       '@evolvo/observability':
         specifier: workspace:*
         version: link:../observability
@@ -230,6 +239,9 @@ importers:
       '@evolvo/schemas':
         specifier: workspace:*
         version: link:../schemas
+      '@evolvo/scoring':
+        specifier: workspace:*
+        version: link:../scoring
       '@evolvo/worktrees':
         specifier: workspace:*
         version: link:../worktrees
@@ -266,6 +278,16 @@ importers:
         specifier: ^4.20.5
         version: 4.21.0
 
+  packages/memory:
+    dependencies:
+      '@evolvo/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+    devDependencies:
+      '@evolvo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+
   packages/models:
     dependencies:
       '@evolvo/api':
@@ -277,6 +299,22 @@ importers:
       zod:
         specifier: ^4.1.5
         version: 4.3.6
+    devDependencies:
+      '@evolvo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+
+  packages/mutation-engine:
+    dependencies:
+      '@evolvo/orchestration':
+        specifier: workspace:*
+        version: link:../orchestration
+      '@evolvo/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+      '@evolvo/scoring':
+        specifier: workspace:*
+        version: link:../scoring
     devDependencies:
       '@evolvo/typescript-config':
         specifier: workspace:*
@@ -326,6 +364,16 @@ importers:
       zod:
         specifier: ^4.1.5
         version: 4.3.6
+    devDependencies:
+      '@evolvo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+
+  packages/scoring:
+    dependencies:
+      '@evolvo/schemas':
+        specifier: workspace:*
+        version: link:../schemas
     devDependencies:
       '@evolvo/typescript-config':
         specifier: workspace:*

@@ -125,6 +125,34 @@ describe('structured logger', () => {
     expect(entries).toHaveLength(1);
   });
 
+  it('supports minimum log levels for sink output', () => {
+    const entries: string[] = [];
+    const logger = createLogger({
+      minLevel: 'info',
+      source: 'runtime.main',
+      sink: {
+        write(entry) {
+          entries.push(entry);
+        }
+      }
+    });
+
+    logger.debug({
+      eventName: 'runtime.debug',
+      message: 'This debug message should be suppressed.'
+    });
+    logger.info({
+      eventName: 'runtime.info',
+      message: 'This info message should be written.'
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(JSON.parse(entries[0])).toMatchObject({
+      eventName: 'runtime.info',
+      level: 'info'
+    });
+  });
+
   it('rejects blank logger sources', () => {
     expect(() =>
       createLogger({

@@ -33,6 +33,7 @@ export type StructuredLogger = {
 
 export type CreateLoggerOptions = {
   correlationIds?: CorrelationContext;
+  minLevel?: LogLevel;
   now?: () => Date;
   sink?: LogSink;
   source: string;
@@ -52,6 +53,17 @@ function createSinkWriter(
   };
 }
 
+const logLevelPriority: Record<LogLevel, number> = {
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40
+};
+
+function shouldWriteEvent(eventLevel: LogLevel, minLevel: LogLevel): boolean {
+  return logLevelPriority[eventLevel] >= logLevelPriority[minLevel];
+}
+
 function normalizeSource(source: string): string {
   const trimmedSource = source.trim();
 
@@ -64,15 +76,23 @@ function normalizeSource(source: string): string {
 
 export function createLogger(options: CreateLoggerOptions): StructuredLogger {
   const sink = options.sink ?? process.stdout;
+  const minLevel = options.minLevel ?? 'debug';
   const source = normalizeSource(options.source);
   const now = options.now ?? (() => new Date());
   const baseCorrelationIds = normalizeCorrelationContext(
     options.correlationIds
   );
   const writeEvent = createSinkWriter(sink);
+  const maybeWriteEvent = (event: StructuredEvent): StructuredEvent => {
+    if (!shouldWriteEvent(event.level, minLevel)) {
+      return event;
+    }
+
+    return writeEvent(event);
+  };
 
   const createLevelLogger = (level: LogLevel) => (input: LoggerMethodInput) =>
-    writeEvent(
+    maybeWriteEvent(
       createStructuredEvent(
         {
           level,
@@ -96,6 +116,7 @@ export function createLogger(options: CreateLoggerOptions): StructuredLogger {
     child(childOptions = {}) {
       return createLogger({
         sink,
+        minLevel,
         now,
         source: childOptions.source ?? source,
         correlationIds: mergeCorrelationContexts(
@@ -108,7 +129,7 @@ export function createLogger(options: CreateLoggerOptions): StructuredLogger {
     error: createLevelLogger('error'),
     info: createLevelLogger('info'),
     log(input) {
-      return writeEvent(
+      return maybeWriteEvent(
         createStructuredEvent(
           {
             ...input,

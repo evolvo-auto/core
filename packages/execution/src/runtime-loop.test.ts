@@ -6,13 +6,22 @@ describe('createRuntimeLoop', () => {
   it('runs a sync/select/execute cycle and records the selected issue outcome', async () => {
     const runtimeLoop = createRuntimeLoop(
       {
-        intervalMs: 1000
+        intervalMs: 1000,
+        logging: {
+          verbosity: 'quiet'
+        }
       },
       {
         executeIssue: vi.fn().mockResolvedValue({
           issueNumber: 901,
           outcome: 'completed'
         }),
+        listFailures: vi.fn().mockResolvedValue([
+          {
+            isSystemic: true,
+            issueNumber: 901
+          }
+        ]),
         listIssues: vi.fn().mockResolvedValue([
           {
             githubIssueNumber: 901,
@@ -54,9 +63,13 @@ describe('createRuntimeLoop', () => {
   it('records runtime loop failures and exposes the error state', async () => {
     const runtimeLoop = createRuntimeLoop(
       {
-        intervalMs: 1000
+        intervalMs: 1000,
+        logging: {
+          verbosity: 'quiet'
+        }
       },
       {
+        listFailures: vi.fn().mockResolvedValue([]),
         syncIssues: vi.fn().mockRejectedValue(new Error('GitHub unavailable'))
       }
     );

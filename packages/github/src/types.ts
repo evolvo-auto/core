@@ -4,6 +4,8 @@ import type { Octokit } from 'octokit';
 
 type CreateLabelParameters =
   RestEndpointMethodTypes['issues']['createLabel']['parameters'];
+type CreateIssueParameters =
+  RestEndpointMethodTypes['issues']['create']['parameters'];
 type CreatePullRequestParameters =
   RestEndpointMethodTypes['pulls']['create']['parameters'];
 type ListCommentsParameters =
@@ -225,6 +227,12 @@ export type SyncRepositoryLabelsOptions = {
 
 export type CreateIssueCommentInput = {
   body: RestEndpointMethodTypes['issues']['createComment']['parameters']['body'];
+};
+
+export type CreateRepositoryIssueInput = {
+  body?: CreateIssueParameters['body'];
+  labels?: CreateIssueParameters['labels'];
+  title: CreateIssueParameters['title'];
 };
 
 export type IssueCommentKind =

@@ -1,6 +1,7 @@
 model MutationProposal {
   id                    String          @id @default(cuid())
   sourceIssueNumber     Int?            @map("source_issue_number")
+  linkedIssueNumber     Int?            @unique @map("linked_issue_number")
   targetSurface         Surface         @map("target_surface")
   title                 String
   rationale             String          @db.Text
@@ -21,6 +22,7 @@ model MutationProposal {
   sourcedRuntimeVersions RuntimeVersion[]        @relation("SourceMutationVersions")
 
   @@index([sourceIssueNumber])
+  @@index([linkedIssueNumber])
   @@index([targetSurface])
   @@index([state])
   @@map("mutation_proposals")
