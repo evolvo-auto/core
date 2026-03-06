@@ -1,7 +1,7 @@
 'use server';
 
-import { getPrismaClient } from './client.js';
-import type { $Enums, Attempt, PrismaClient } from './generated/prisma/client.js';
+import { getPrismaClient } from './client.ts';
+import type { $Enums, Attempt, PrismaClient } from './generated/prisma/client.ts';
 
 export type CreateAttemptRecordInput = {
   evaluationStatus?: $Enums.EvaluationStatus | null;

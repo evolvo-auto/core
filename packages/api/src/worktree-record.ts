@@ -1,14 +1,14 @@
 'use server';
 
-import { getPrismaClient } from './client.js';
+import { getPrismaClient } from './client.ts';
 import type {
   $Enums,
   Prisma,
   PrismaClient,
   WorktreeRecord
-} from './generated/prisma/client.js';
+} from './generated/prisma/client.ts';
 
-export const activeWorktreeStatuses = [
+const activeWorktreeStatuses = [
   'RESERVED',
   'CREATING',
   'READY',

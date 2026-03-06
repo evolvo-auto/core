@@ -1,11 +1,11 @@
 'use server';
 
-import { getPrismaClient } from './client.js';
+import { getPrismaClient } from './client.ts';
 import type {
   GitHubAuditEvent,
   Prisma,
   PrismaClient
-} from './generated/prisma/client.js';
+} from './generated/prisma/client.ts';
 
 export type CreateGitHubAuditEventInput = {
   action: string;

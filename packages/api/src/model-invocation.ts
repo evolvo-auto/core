@@ -1,15 +1,14 @@
 'use server';
 
-import { getPrismaClient } from './client.js';
+import { getPrismaClient } from './client.ts';
 import type {
   $Enums,
   ModelInvocation,
   Prisma,
   PrismaClient
-} from './generated/prisma/client.js';
+} from './generated/prisma/client.ts';
 
-export const modelProviders = ['openai', 'ollama'] as const;
-export type ModelProvider = (typeof modelProviders)[number];
+export type ModelProvider = 'openai' | 'ollama';
 
 export type CreateModelInvocationInput = {
   attemptId?: string;
