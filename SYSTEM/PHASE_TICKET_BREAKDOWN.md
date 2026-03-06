@@ -290,13 +290,25 @@ Deterministic issue-to-branch naming.
 
 ### P3-002 Implement worktree reservation
 
+Status: done
+Branch: `feature/P3-002-003-004-worktree-lifecycle-core`
+PR: `#28`
+
 Reserve and record worktree metadata before creation.
 
 ### P3-003 Implement worktree creation
 
+Status: done
+Branch: `feature/P3-002-003-004-worktree-lifecycle-core`
+PR: `#28`
+
 Create git worktree and branch from base ref.
 
 ### P3-004 Implement worktree hydration
+
+Status: done
+Branch: `feature/P3-002-003-004-worktree-lifecycle-core`
+PR: `#28`
 
 Install deps, verify tooling, write environment fingerprint.
 
