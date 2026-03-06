@@ -252,6 +252,28 @@ export type WriteStructuredIssueCommentResult = {
   issueNumber: number;
 };
 
+export type IssueDispositionAction = 'defer' | 'reject';
+
+export type IssueDispositionInput = {
+  evidence?: string[];
+  nextStep?: string;
+  status: string;
+  title?: string;
+  whatChanged?: string[];
+};
+
+export type IssueDispositionOptions = TransitionIssueStateOptions;
+
+export type IssueDispositionResult = {
+  action: IssueDispositionAction;
+  comment?: GitHubIssueComment;
+  commentBody: string;
+  commentPosted: boolean;
+  issueNumber: number;
+  stateTransition: TransitionIssueStateResult;
+  targetState: GitHubIssueWorkflowState;
+};
+
 export type CreatePullRequestInput = {
   base: CreatePullRequestParameters['base'];
   body?: CreatePullRequestParameters['body'];

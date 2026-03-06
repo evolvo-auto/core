@@ -8,6 +8,7 @@
     "./comments": "./src/comments.ts",
     "./issue-classification": "./src/issue-classification.ts",
     "./issue-comment-writer": "./src/issue-comment-writer.ts",
+    "./issue-disposition": "./src/issue-disposition.ts",
     "./issue-state": "./src/issue-state.ts",
     "./issue-sync": "./src/issue-sync.ts",
     "./issues": "./src/issues.ts",
