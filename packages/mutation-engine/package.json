@@ -1,0 +1,27 @@
+{
+  "name": "@evolvo/mutation-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./failure-issue-draft": "./src/failure-issue-draft.ts",
+    "./failure-reflection": "./src/failure-reflection.ts",
+    "./mutation-issue-draft": "./src/mutation-issue-draft.ts",
+    "./mutation-proposal-generator": "./src/mutation-proposal-generator.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "clean": "git clean -fdX .",
+    "lint": "eslint . --max-warnings 0 --no-error-on-unmatched-pattern",
+    "test": "vitest run --root . --config ../../vitest.config.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@evolvo/orchestration": "workspace:*",
+    "@evolvo/scoring": "workspace:*",
+    "@evolvo/schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "@evolvo/typescript-config": "workspace:*"
+  }
+}
