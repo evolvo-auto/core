@@ -1,7 +1,11 @@
 import { listFailureRecords } from '@evolvo/api/failure-record';
 import { listIssueRecords } from '@evolvo/api/issue-record';
+import { listMutationProposals } from '@evolvo/api/mutation-proposal';
 import { deferIssue, rejectIssue } from '@evolvo/github/issue-disposition';
 import { syncRepositoryIssues } from '@evolvo/github/issue-sync';
+import {
+  syncPromptDefinitionRegistry
+} from '@evolvo/mutation-engine/prompt-registry';
 import { createLogger } from '@evolvo/observability/logger';
 import { runSelectorRole } from '@evolvo/orchestration/selector-role';
 import { buildIssuePriorityScore } from '@evolvo/scoring/issue-priority';
@@ -45,9 +49,11 @@ export type CreateRuntimeLoopDependencies = {
   executeIssue?: typeof executeIssueAttempt;
   listFailures?: typeof listFailureRecords;
   listIssues?: typeof listIssueRecords;
+  listMutations?: typeof listMutationProposals;
   now?: () => Date;
   reject?: typeof rejectIssue;
   selectIssue?: typeof runSelectorRole;
+  syncPromptDefinitions?: typeof syncPromptDefinitionRegistry;
   syncIssues?: typeof syncRepositoryIssues;
 };
 
@@ -84,9 +90,12 @@ export function createRuntimeLoop(
   const executeIssue = dependencies.executeIssue ?? executeIssueAttempt;
   const listFailures = dependencies.listFailures ?? listFailureRecords;
   const listIssues = dependencies.listIssues ?? listIssueRecords;
+  const listMutations = dependencies.listMutations ?? listMutationProposals;
   const now = dependencies.now ?? (() => new Date());
   const reject = dependencies.reject ?? rejectIssue;
   const selectIssue = dependencies.selectIssue ?? runSelectorRole;
+  const syncPromptDefinitions =
+    dependencies.syncPromptDefinitions ?? syncPromptDefinitionRegistry;
   const syncIssues = dependencies.syncIssues ?? syncRepositoryIssues;
   const status: RuntimeLoopStatus = {
     consecutiveFailures: 0,
@@ -117,6 +126,7 @@ export function createRuntimeLoop(
     });
 
     try {
+      await syncPromptDefinitions();
       await syncIssues({
         state: 'open'
       });
@@ -124,6 +134,17 @@ export function createRuntimeLoop(
       const candidateIssues = await listIssues({
         states: ['PLANNED', 'TRIAGE']
       });
+      const candidateMutations = (
+        await listMutations({
+          limit: 100
+        })
+      ).filter(
+        (proposal) =>
+          proposal.linkedIssueNumber !== null &&
+          ['PROPOSED', 'SELECTED', 'IN_PROGRESS', 'VALIDATED'].includes(
+            proposal.state
+          )
+      );
       const recordedFailures = await listFailures({
         limit: 500
       });
@@ -133,18 +154,22 @@ export function createRuntimeLoop(
         message: 'Runtime loop synchronized GitHub issues and local failure memory.',
         data: {
           candidateIssueCount: candidateIssues.length,
+          candidateMutationCount: candidateMutations.length,
           recordedFailureCount: recordedFailures.length,
           ...(includeVerboseData
             ? {
                 candidateIssueNumbers: candidateIssues.map(
                   (issueRecord) => issueRecord.githubIssueNumber
+                ),
+                candidateMutationIds: candidateMutations.map(
+                  (proposal) => proposal.id
                 )
               }
             : {})
         }
       });
 
-      if (candidateIssues.length === 0) {
+      if (candidateIssues.length === 0 && candidateMutations.length === 0) {
         status.consecutiveFailures = 0;
         status.lastOutcome = 'idle';
         status.state = 'idle';
@@ -208,6 +233,16 @@ export function createRuntimeLoop(
           })(),
           state: issueRecord.state,
           title: issueRecord.title
+        })),
+        candidateMutations: candidateMutations.map((proposal) => ({
+          mutationId: proposal.id,
+          priorityScore: proposal.priorityScore ?? undefined,
+          summary:
+            proposal.implementationPlan ??
+            proposal.predictedBenefit ??
+            proposal.rationale,
+          targetSurface: proposal.targetSurface.toLowerCase().replace(/_/g, '-'),
+          title: proposal.title
         })),
         strategyNotes: [...failureCountsByIssue.entries()]
           .filter(([, failureStats]) => failureStats.totalFailures >= 2)
@@ -290,8 +325,9 @@ export function createRuntimeLoop(
       }
 
       if (
-        !selection.targetIssueNumber ||
-        !['select-experiment', 'select-issue'].includes(selection.decisionType)
+        !['select-experiment', 'select-issue', 'select-mutation'].includes(
+          selection.decisionType
+        )
       ) {
         status.consecutiveFailures = 0;
         status.lastOutcome = 'idle';
@@ -308,11 +344,27 @@ export function createRuntimeLoop(
         return;
       }
 
-      status.lastSelectedIssueNumber = selection.targetIssueNumber;
+      const selectedIssueNumber =
+        selection.decisionType === 'select-mutation'
+          ? candidateMutations.find(
+              (proposal) => proposal.id === selection.targetMutationId
+            )?.linkedIssueNumber
+          : selection.targetIssueNumber;
+
+      if (!selectedIssueNumber) {
+        status.consecutiveFailures = 1;
+        status.lastOutcome = 'failed';
+        status.state = 'error';
+        status.lastErrorMessage =
+          'Selector chose a mutation that was not linked to an executable issue.';
+        return;
+      }
+
+      status.lastSelectedIssueNumber = selectedIssueNumber;
       status.state = 'executing';
       logger.info({
         correlationIds: {
-          issueNumber: selection.targetIssueNumber
+          issueNumber: selectedIssueNumber
         },
         eventName: 'runtime-loop.execution.started',
         message: 'Runtime loop started executing the selected issue.'
@@ -321,7 +373,7 @@ export function createRuntimeLoop(
       const result = await executeIssue({
         baseRef: input.baseRef,
         gitRemote: input.gitRemote,
-        issueNumber: selection.targetIssueNumber,
+        issueNumber: selectedIssueNumber,
         logging,
         maxRepairAttempts: input.maxRepairAttempts,
         smokeContract: input.smokeContract,

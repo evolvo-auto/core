@@ -1,4 +1,33 @@
 {
+  "name": "@evolvo/genome",
+  "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "exports": {
+    "./heuristics/failure-strategy": "./heuristics/failure-strategy.ts",
+    "./heuristics/issue-priority": "./heuristics/issue-priority.ts",
+    "./prompts/builder": "./prompts/builder.ts",
+    "./prompts/critic": "./prompts/critic.ts",
+    "./prompts/evaluator-interpreter": "./prompts/evaluator-interpreter.ts",
+    "./prompts/mutator": "./prompts/mutator.ts",
+    "./prompts/narrator": "./prompts/narrator.ts",
+    "./prompts/planner": "./prompts/planner.ts",
+    "./prompts/prompt-definition": "./prompts/prompt-definition.ts",
+    "./prompts/selector": "./prompts/selector.ts",
+    "./routing/model-routing": "./routing/model-routing.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "clean": "git clean -fdX .",
+    "lint": "eslint . --max-warnings 0 --no-error-on-unmatched-pattern",
+    "test": "vitest run --root . --config ../vitest.config.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@evolvo/core": "workspace:*",
+    "@evolvo/schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "@evolvo/typescript-config": "workspace:*"
+  }
 }

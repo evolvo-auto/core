@@ -46,6 +46,31 @@ export const failureCategories = [
 export const failureCategorySchema = z.enum(failureCategories);
 export type FailureCategory = z.infer<typeof failureCategorySchema>;
 
+export const challengeCategories = [
+  'general',
+  'feature-implementation',
+  'bug-fixing',
+  'refactor',
+  'test-generation',
+  'fresh-repo-generation',
+  'ci-setup',
+  'runtime-upgrade-stability',
+  'prompt-mutation-impact',
+  'model-routing-quality'
+] as const;
+export const challengeCategorySchema = z.enum(challengeCategories);
+export type ChallengeCategory = z.infer<typeof challengeCategorySchema>;
+
+export const benchmarkTypes = [
+  'fixed',
+  'human-challenge',
+  'evolvo-challenge',
+  'regression-pack',
+  'holdout-pack'
+] as const;
+export const benchmarkTypeSchema = z.enum(benchmarkTypes);
+export type BenchmarkType = z.infer<typeof benchmarkTypeSchema>;
+
 export const outcomes = [
   'success',
   'partial',

@@ -141,6 +141,19 @@ importers:
         specifier: ^4.20.5
         version: 4.21.0
 
+  genome:
+    dependencies:
+      '@evolvo/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@evolvo/schemas':
+        specifier: workspace:*
+        version: link:../packages/schemas
+    devDependencies:
+      '@evolvo/typescript-config':
+        specifier: workspace:*
+        version: link:../packages/typescript-config
+
   packages/api:
     dependencies:
       '@prisma/adapter-pg':
@@ -157,8 +170,43 @@ importers:
         specifier: workspace:*
         version: link:../typescript-config
 
+  packages/benchmarks:
+    dependencies:
+      '@evolvo/api':
+        specifier: workspace:*
+        version: link:../api
+      '@evolvo/challenges':
+        specifier: workspace:*
+        version: link:../challenges
+      '@evolvo/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+    devDependencies:
+      '@evolvo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^24.5.2
+        version: 24.12.0
+
+  packages/challenges:
+    dependencies:
+      '@evolvo/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+    devDependencies:
+      '@evolvo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^24.5.2
+        version: 24.12.0
+
   packages/core:
     dependencies:
+      '@evolvo/schemas':
+        specifier: workspace:*
+        version: link:../schemas
       dotenv:
         specifier: ^17.2.2
         version: 17.3.1
@@ -215,6 +263,12 @@ importers:
       '@evolvo/api':
         specifier: workspace:*
         version: link:../api
+      '@evolvo/benchmarks':
+        specifier: workspace:*
+        version: link:../benchmarks
+      '@evolvo/challenges':
+        specifier: workspace:*
+        version: link:../challenges
       '@evolvo/core':
         specifier: workspace:*
         version: link:../core
@@ -261,6 +315,12 @@ importers:
       '@evolvo/api':
         specifier: workspace:*
         version: link:../api
+      '@evolvo/benchmarks':
+        specifier: workspace:*
+        version: link:../benchmarks
+      '@evolvo/challenges':
+        specifier: workspace:*
+        version: link:../challenges
       '@evolvo/core':
         specifier: workspace:*
         version: link:../core
@@ -296,6 +356,9 @@ importers:
       '@evolvo/core':
         specifier: workspace:*
         version: link:../core
+      '@evolvo/genome':
+        specifier: workspace:*
+        version: link:../../genome
       zod:
         specifier: ^4.1.5
         version: 4.3.6
@@ -306,6 +369,12 @@ importers:
 
   packages/mutation-engine:
     dependencies:
+      '@evolvo/api':
+        specifier: workspace:*
+        version: link:../api
+      '@evolvo/genome':
+        specifier: workspace:*
+        version: link:../../genome
       '@evolvo/orchestration':
         specifier: workspace:*
         version: link:../orchestration
@@ -315,6 +384,9 @@ importers:
       '@evolvo/scoring':
         specifier: workspace:*
         version: link:../scoring
+      zod:
+        specifier: ^4.1.5
+        version: 4.3.6
     devDependencies:
       '@evolvo/typescript-config':
         specifier: workspace:*
@@ -335,6 +407,9 @@ importers:
       '@evolvo/core':
         specifier: workspace:*
         version: link:../core
+      '@evolvo/genome':
+        specifier: workspace:*
+        version: link:../../genome
       '@evolvo/models':
         specifier: workspace:*
         version: link:../models
@@ -371,6 +446,9 @@ importers:
 
   packages/scoring:
     dependencies:
+      '@evolvo/genome':
+        specifier: workspace:*
+        version: link:../../genome
       '@evolvo/schemas':
         specifier: workspace:*
         version: link:../schemas

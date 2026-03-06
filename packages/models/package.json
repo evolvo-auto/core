@@ -19,6 +19,7 @@
   "dependencies": {
     "@evolvo/api": "workspace:*",
     "@evolvo/core": "workspace:*",
+    "@evolvo/genome": "workspace:*",
     "zod": "^4.1.5"
   },
   "devDependencies": {

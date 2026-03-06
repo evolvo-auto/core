@@ -61,6 +61,21 @@ describe('processFailureFollowup', () => {
         user: {
           type: 'Bot'
         }
+      })
+      .mockResolvedValueOnce({
+        body: '## Goal\n\nProbe runtime resilience.\n',
+        labels: [
+          'source:evolvo',
+          'kind:challenge',
+          'evolvo-made-challenge',
+          'state:triage'
+        ],
+        number: 42,
+        title:
+          'Challenge: Stress Debugging resilience for model-quality/runtime/openai',
+        user: {
+          type: 'Bot'
+        }
       });
     const createMutation = vi.fn().mockResolvedValue({
       id: 'mutation_1'
@@ -103,8 +118,15 @@ describe('processFailureFollowup', () => {
           }
         }),
         getCapability: vi.fn().mockResolvedValue(null),
+        listChallenges: vi.fn().mockResolvedValue([]),
         listFailures: vi.fn().mockResolvedValue([]),
         listMutations: vi.fn().mockResolvedValue([]),
+        upsertBenchmark: vi.fn().mockResolvedValue({
+          id: 'benchmark_1'
+        }),
+        upsertChallenge: vi.fn().mockResolvedValue({
+          id: 'challenge_1'
+        }),
         updateCapability: vi.fn().mockResolvedValue(undefined),
         updateFailure: vi.fn().mockResolvedValue(undefined),
         updateMutation: vi.fn().mockResolvedValue(undefined),
@@ -114,6 +136,7 @@ describe('processFailureFollowup', () => {
 
     expect(result).toEqual(
       expect.objectContaining({
+        createdChallengeIssueNumber: 42,
         createdFailureIssueNumber: undefined,
         createdMutationIssueNumber: 41,
         failureRecordId: 'failure_1',

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./benchmark-schemas": "./src/benchmark-schemas.ts",
     "./failure-memory-schemas": "./src/failure-memory-schemas.ts",
     "./health-schemas": "./src/health-schemas.ts",
     "./role-output-schemas": "./src/role-output-schemas.ts",

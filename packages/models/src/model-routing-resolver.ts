@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { routingPolicy as defaultRoutingPolicy } from '../../../genome/routing/model-routing.js';
+import { routingPolicy as defaultRoutingPolicy } from '@evolvo/genome/routing/model-routing';
 import {
   parseRoutingPolicy,
   type CapabilityKey,

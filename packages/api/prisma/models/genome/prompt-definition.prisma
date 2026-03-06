@@ -1,0 +1,28 @@
+model PromptDefinition {
+  id               String            @id @default(cuid())
+  promptKey        String            @map("prompt_key")
+  version          Int
+  title            String
+  role             String
+  responseMode     String            @map("response_mode")
+  systemPrompt     String            @db.Text @map("system_prompt")
+  sampleUserPrompt String            @db.Text @map("sample_user_prompt")
+  sampleInputJson  Json              @map("sample_input_json")
+  isActive         Boolean           @default(true) @map("is_active")
+  lineageParentId  String?           @map("lineage_parent_id")
+  lineageReason    String?           @db.Text @map("lineage_reason")
+  sourceMutationId String?           @map("source_mutation_id")
+  sourceFingerprint String           @map("source_fingerprint")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  sourceMutation   MutationProposal? @relation("PromptSourceMutation", fields: [sourceMutationId], references: [id])
+  lineageParent    PromptDefinition? @relation("PromptLineage", fields: [lineageParentId], references: [id])
+  lineageChildren  PromptDefinition[] @relation("PromptLineage")
+
+  @@unique([promptKey, version])
+  @@index([promptKey, isActive])
+  @@index([role])
+  @@index([sourceMutationId])
+  @@map("prompt_definitions")
+}

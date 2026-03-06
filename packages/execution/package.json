@@ -22,6 +22,8 @@
   },
   "dependencies": {
     "@evolvo/api": "workspace:*",
+    "@evolvo/benchmarks": "workspace:*",
+    "@evolvo/challenges": "workspace:*",
     "@evolvo/core": "workspace:*",
     "@evolvo/evaluation": "workspace:*",
     "@evolvo/github": "workspace:*",

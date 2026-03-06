@@ -1,0 +1,24 @@
+model ChallengeRecord {
+  id                     String            @id @default(cuid())
+  sourceIssueNumber      Int               @unique @map("source_issue_number")
+  issueSource            IssueSource       @map("issue_source")
+  title                  String
+  category               ChallengeCategory
+  intent                 String            @db.Text
+  successSignal          String?           @db.Text @map("success_signal")
+  constraintsJson        Json?             @map("constraints_json")
+  artifactExpectationsJson Json?           @map("artifact_expectations_json")
+  validationStepsJson    Json?             @map("validation_steps_json")
+  scoringNotesJson       Json?             @map("scoring_notes_json")
+  capabilityTags         String[]          @default([]) @map("capability_tags")
+  sourceFingerprint      String            @map("source_fingerprint")
+  createdAt              DateTime          @default(now()) @map("created_at")
+  updatedAt              DateTime          @updatedAt @map("updated_at")
+
+  sourceIssue            IssueRecord       @relation("ChallengeSourceIssue", fields: [sourceIssueNumber], references: [githubIssueNumber])
+  benchmarkDefinitions   BenchmarkDefinition[]
+
+  @@index([category])
+  @@index([issueSource])
+  @@map("challenges")
+}
