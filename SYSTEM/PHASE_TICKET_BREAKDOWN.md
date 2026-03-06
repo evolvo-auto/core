@@ -69,6 +69,10 @@ Add structured logging with correlation IDs for issue, attempt, worktree, runtim
 
 ### P0-008 Create config loader
 
+Status: done
+Branch: `feature/P0-008-create-config-loader`
+PR: `#8`
+
 Add environment/config loading for GitHub, OpenAI, Ollama, Postgres.
 
 ### P0-009 Create dashboard shell
