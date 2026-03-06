@@ -1,4 +1,7 @@
 import {
+  upsertBenchmarkDefinition
+} from '@evolvo/api/benchmark-definition';
+import {
   createFailureRecord,
   listFailureRecords,
   updateFailureRecord
@@ -8,10 +11,23 @@ import {
   upsertCapabilityRecord
 } from '@evolvo/api/capability-record';
 import {
+  listChallengeRecords,
+  upsertChallengeRecord
+} from '@evolvo/api/challenge-record';
+import {
   createMutationProposal,
   listMutationProposals,
   updateMutationProposal
 } from '@evolvo/api/mutation-proposal';
+import {
+  buildChallengeBenchmarkDefinitionInput
+} from '@evolvo/benchmarks/registry';
+import {
+  buildGeneratedChallengeIssueDraft
+} from '@evolvo/challenges/challenge-issue-draft';
+import {
+  normalizeChallenge
+} from '@evolvo/challenges/normalize-challenge';
 import { upsertIssueRecord } from '@evolvo/api/issue-record';
 import { classifyIssue } from '@evolvo/github/issue-classification';
 import { createRepositoryIssue } from '@evolvo/github/issues';
@@ -59,6 +75,7 @@ export type ProcessFailureFollowupInput = {
 
 export type ProcessFailureFollowupResult = {
   capabilitySnapshot: CapabilitySnapshot;
+  createdChallengeIssueNumber?: number;
   createdFailureIssueNumber?: number;
   createdMutationIssueNumber?: number;
   failureRecordId: string;
@@ -71,13 +88,18 @@ export type ProcessFailureFollowupResult = {
 };
 
 export type ProcessFailureFollowupDependencies = {
+  buildChallengeDraft?: typeof buildGeneratedChallengeIssueDraft;
   createFailure?: typeof createFailureRecord;
   createIssue?: typeof createRepositoryIssue;
   createMutation?: typeof createMutationProposal;
   generateMutation?: typeof generateMutationProposal;
   getCapability?: typeof getCapabilityRecordByKey;
+  listChallenges?: typeof listChallengeRecords;
   listFailures?: typeof listFailureRecords;
   listMutations?: typeof listMutationProposals;
+  normalizeChallengeDefinition?: typeof normalizeChallenge;
+  upsertBenchmark?: typeof upsertBenchmarkDefinition;
+  upsertChallenge?: typeof upsertChallengeRecord;
   updateCapability?: typeof upsertCapabilityRecord;
   updateFailure?: typeof updateFailureRecord;
   updateMutation?: typeof updateMutationProposal;
@@ -151,6 +173,46 @@ function buildFailureSummary(input: {
     .join('\n');
 }
 
+function toPrismaChallengeCategory(
+  category:
+    | 'bug-fixing'
+    | 'ci-setup'
+    | 'feature-implementation'
+    | 'fresh-repo-generation'
+    | 'general'
+    | 'model-routing-quality'
+    | 'prompt-mutation-impact'
+    | 'refactor'
+    | 'runtime-upgrade-stability'
+    | 'test-generation'
+): 'BUG_FIXING' | 'CI_SETUP' | 'FEATURE_IMPLEMENTATION' | 'FRESH_REPO_GENERATION' | 'GENERAL' | 'MODEL_ROUTING_QUALITY' | 'PROMPT_MUTATION_IMPACT' | 'REFACTOR' | 'RUNTIME_UPGRADE_STABILITY' | 'TEST_GENERATION' {
+  return category.toUpperCase().replace(/-/g, '_') as
+    | 'BUG_FIXING'
+    | 'CI_SETUP'
+    | 'FEATURE_IMPLEMENTATION'
+    | 'FRESH_REPO_GENERATION'
+    | 'GENERAL'
+    | 'MODEL_ROUTING_QUALITY'
+    | 'PROMPT_MUTATION_IMPACT'
+    | 'REFACTOR'
+    | 'RUNTIME_UPGRADE_STABILITY'
+    | 'TEST_GENERATION';
+}
+
+function shouldCreateChallenge(input: {
+  capabilitySnapshot: CapabilitySnapshot;
+  criticOutput: CriticOutput;
+  recurrenceCount: number;
+  strategy: ReturnType<typeof decideFailureHandlingStrategy>;
+}): boolean {
+  return (
+    input.criticOutput.isSystemic ||
+    input.strategy === 'mutation-first' ||
+    input.recurrenceCount >= 3 ||
+    input.capabilitySnapshot.confidenceScore < 45
+  );
+}
+
 async function createAndCacheIssue(
   input: {
     body: string;
@@ -183,14 +245,22 @@ export async function processFailureFollowup(
   input: ProcessFailureFollowupInput,
   dependencies: ProcessFailureFollowupDependencies = {}
 ): Promise<ProcessFailureFollowupResult> {
+  const buildChallengeDraft =
+    dependencies.buildChallengeDraft ?? buildGeneratedChallengeIssueDraft;
   const createFailure = dependencies.createFailure ?? createFailureRecord;
   const createIssue = dependencies.createIssue ?? createRepositoryIssue;
   const createMutation = dependencies.createMutation ?? createMutationProposal;
   const generateMutation =
     dependencies.generateMutation ?? generateMutationProposal;
   const getCapability = dependencies.getCapability ?? getCapabilityRecordByKey;
+  const listChallenges = dependencies.listChallenges ?? listChallengeRecords;
   const listFailures = dependencies.listFailures ?? listFailureRecords;
   const listMutations = dependencies.listMutations ?? listMutationProposals;
+  const normalizeChallengeDefinition =
+    dependencies.normalizeChallengeDefinition ?? normalizeChallenge;
+  const upsertBenchmark =
+    dependencies.upsertBenchmark ?? upsertBenchmarkDefinition;
+  const upsertChallenge = dependencies.upsertChallenge ?? upsertChallengeRecord;
   const updateCapability =
     dependencies.updateCapability ?? upsertCapabilityRecord;
   const updateFailure = dependencies.updateFailure ?? updateFailureRecord;
@@ -281,6 +351,7 @@ export async function processFailureFollowup(
     recurrenceCount
   });
   const followupErrors: string[] = [];
+  let createdChallengeIssueNumber: number | undefined;
   let createdFailureIssueNumber: number | undefined;
   let createdMutationIssueNumber: number | undefined;
   let mutationProposalId: string | undefined;
@@ -390,8 +461,92 @@ export async function processFailureFollowup(
     }
   }
 
+  if (
+    shouldCreateChallenge({
+      capabilitySnapshot,
+      criticOutput: input.criticOutput,
+      recurrenceCount,
+      strategy
+    })
+  ) {
+    try {
+      const challengeDraft = buildChallengeDraft({
+        capabilityKey: input.capabilityKey,
+        evidence: [
+          `source-issue=#${String(input.issueNumber)}`,
+          `recurrence-group=${recurrenceGroup}`,
+          ...input.observedFailures.slice(0, 3)
+        ],
+        recurrenceCount,
+        recurrenceGroup,
+        sourceIssueNumber: input.issueNumber,
+        weaknessSummary: buildFailureSummary({
+          criticOutput: input.criticOutput,
+          recurrenceCount,
+          recurrenceGroup,
+          symptom
+        })
+      });
+      const existingChallenge = (
+        await listChallenges({
+          issueSource: 'EVOLVO',
+          limit: 100
+        })
+      ).find(
+        (challengeRecord) =>
+          challengeRecord.sourceFingerprint === challengeDraft.dedupeFingerprint
+      );
+
+      if (existingChallenge) {
+        createdChallengeIssueNumber = existingChallenge.sourceIssueNumber;
+      } else {
+        createdChallengeIssueNumber = await createAndCacheIssue(
+          challengeDraft.issue,
+          {
+            createIssue,
+            upsertIssue
+          }
+        );
+
+        const normalizedChallenge = normalizeChallengeDefinition({
+          body: challengeDraft.issue.body,
+          labels: challengeDraft.issue.labels,
+          source: 'evolvo',
+          sourceIssueNumber: createdChallengeIssueNumber,
+          title: challengeDraft.issue.title
+        });
+        const challengeRecord = await upsertChallenge({
+          artifactExpectationsJson: normalizedChallenge.artifactExpectations,
+          capabilityTags: normalizedChallenge.capabilityTags,
+          category: toPrismaChallengeCategory(normalizedChallenge.category),
+          constraintsJson: normalizedChallenge.constraints,
+          intent: normalizedChallenge.intent,
+          issueSource: 'EVOLVO',
+          scoringNotesJson: normalizedChallenge.scoringNotes,
+          sourceFingerprint: normalizedChallenge.sourceFingerprint,
+          sourceIssueNumber: normalizedChallenge.sourceIssueNumber,
+          successSignal: normalizedChallenge.successSignal,
+          title: normalizedChallenge.title,
+          validationStepsJson: normalizedChallenge.validationSteps
+        });
+
+        await upsertBenchmark(
+          buildChallengeBenchmarkDefinitionInput(
+            normalizedChallenge,
+            challengeRecord.id
+          )
+        );
+      }
+    } catch (error) {
+      followupErrors.push(
+        `Challenge generation failed: ${toErrorMessage(error)}`
+      );
+    }
+  }
+
   return {
     capabilitySnapshot,
+    createdChallengeIssueNumber,
     createdFailureIssueNumber,
     createdMutationIssueNumber,
     failureRecordId: failureRecord.id,

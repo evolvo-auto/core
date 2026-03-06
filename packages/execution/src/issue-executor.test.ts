@@ -64,6 +64,11 @@ describe('executeIssueAttempt', () => {
           recommendedApproach: 'reject'
         } satisfies PlannerOutput),
         reject,
+        runBenchmarks: vi.fn().mockResolvedValue({
+          averageScore: null,
+          benchmarkRuns: [],
+          selectedBenchmarkKeys: []
+        }),
         updateIssue: vi.fn().mockResolvedValue(undefined)
       }
     );
@@ -156,6 +161,11 @@ describe('executeIssueAttempt', () => {
           branchName: 'issue/801-runtime-loop',
           commitMessage: 'feat(issue-801): Implement runtime loop',
           remoteName: 'origin'
+        }),
+        runBenchmarks: vi.fn().mockResolvedValue({
+          averageScore: 88,
+          benchmarkRuns: [],
+          selectedBenchmarkKeys: ['core-runtime-smoke']
         }),
         reserve: vi.fn().mockResolvedValue({
           branchName: 'issue/801-runtime-loop',
@@ -275,6 +285,11 @@ describe('executeIssueAttempt', () => {
           branchName: 'issue/801-runtime-loop',
           commitMessage: 'feat(issue-801): Implement runtime loop',
           remoteName: 'origin'
+        }),
+        runBenchmarks: vi.fn().mockResolvedValue({
+          averageScore: 88,
+          benchmarkRuns: [],
+          selectedBenchmarkKeys: ['core-runtime-smoke']
         }),
         reserve: vi.fn().mockResolvedValue({
           branchName: 'issue/801-runtime-loop',
@@ -443,6 +458,11 @@ describe('executeIssueAttempt', () => {
             symptom: 'Schema validation failed'
           },
           strategy: 'mutation-first'
+        }),
+        runBenchmarks: vi.fn().mockResolvedValue({
+          averageScore: 41,
+          benchmarkRuns: [],
+          selectedBenchmarkKeys: ['core-runtime-smoke', 'typescript-regression-pack']
         }),
         reserve: vi.fn().mockResolvedValue({
           branchName: 'issue/801-runtime-loop',
