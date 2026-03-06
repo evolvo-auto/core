@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/font/google', () => ({
   Geist: () => ({
-    variable: 'font-dashboard'
+    className: 'font-dashboard'
   })
 }));
 
@@ -19,6 +19,7 @@ describe('RootLayout', () => {
     );
 
     expect(markup).toContain('<html class="font-dashboard" lang="en">');
-    expect(markup).toContain('<body><main>Dashboard shell</main></body>');
+    expect(markup).toContain('min-h-screen overflow-x-hidden');
+    expect(markup).toContain('<main>Dashboard shell</main>');
   });
 });

@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     '@evolvo/core',
     '@evolvo/observability',
     '@evolvo/schemas',
+    '@evolvo/tailwind-config',
     '@evolvo/ui'
   ]
 };

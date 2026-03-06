@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-evolvo-accent: #87f9b6;
+  --color-evolvo-accent-strong: #47d98c;
+  --color-evolvo-border: rgba(164, 222, 203, 0.18);
+  --color-evolvo-border-strong: rgba(135, 249, 182, 0.24);
+  --color-evolvo-ink: #ecf6f2;
+  --color-evolvo-ink-muted: rgba(236, 246, 242, 0.54);
+  --color-evolvo-ink-soft: rgba(236, 246, 242, 0.72);
+  --color-evolvo-pending: #ffbf69;
+}

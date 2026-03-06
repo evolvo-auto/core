@@ -9,6 +9,7 @@ describe('nextConfig', () => {
       '@evolvo/core',
       '@evolvo/observability',
       '@evolvo/schemas',
+      '@evolvo/tailwind-config',
       '@evolvo/ui'
     ]);
   });

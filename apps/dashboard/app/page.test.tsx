@@ -13,6 +13,7 @@ describe('DashboardPage', () => {
     );
     expect(markup).toContain('Capability overview');
     expect(markup).toContain('This screen is intentionally non-authoritative.');
+    expect(markup).not.toContain('style=');
   });
 
   it('renders every planned system signal card in the overview grid', () => {
