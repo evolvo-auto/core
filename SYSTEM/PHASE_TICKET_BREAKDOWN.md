@@ -148,6 +148,10 @@ Allow runtime to write structured progress/evaluation comments.
 
 ### P1-007 Implement PR creation/update client
 
+Status: done
+Branch: `feature/P1-007-implement-pr-creation-update-client`
+PR: `#18`
+
 Create and update PRs from worktree branches.
 
 ### P1-008 Add PR label syncing
