@@ -642,41 +642,81 @@ self-modify prompts, templates, routing, heuristics.
 
 ### P7-001 Move prompts into genome package/path
 
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
+
 Make role prompts versionable and mutable.
 
 ### P7-002 Move routing config into genome
+
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
 
 Make routing policy explicitly mutable.
 
 ### P7-003 Move heuristic weights into genome
 
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
+
 Expose priority and strategy weights for mutation.
 
 ### P7-004 Implement mutation PR generation
+
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
 
 Given a mutation issue, produce actual change branch/PR.
 
 ### P7-005 Implement mutation evaluation harness
 
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
+
 Run benchmark/regression comparison for genome changes.
 
 ### P7-006 Add routing change evidence summaries
+
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
 
 Require before/after reasoning in PR comments.
 
 ### P7-007 Add prompt lineage tracking
 
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
+
 Version prompt changes with source mutation linkage.
 
 ### P7-008 Add mutation adoption/rejection logic
+
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
 
 Record whether the mutation actually helped.
 
 ### P7-009 Add selector support for mutation work
 
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
+
 Let Evolvo prioritise self-improvement intentionally.
 
 ### P7-010 Add benchmark evidence requirement for routing mutation
+
+Status: done
+Branch: `feature/P7-complete-genome-mutation-engine`
+PR: `#35`
 
 Ensure routing changes are validated before adoption.
 
