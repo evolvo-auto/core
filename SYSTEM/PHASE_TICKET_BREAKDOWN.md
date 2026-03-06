@@ -164,6 +164,10 @@ Mirror core labels from issues to PRs where appropriate.
 
 ### P1-009 Implement issue rejection/defer flow
 
+Status: done
+Branch: `feature/P1-009-implement-issue-rejection-defer-flow`
+PR: `#21`
+
 Allow Evolvo to explain and label ignored or deferred issues.
 
 ### P1-010 Add GitHub audit event persistence
