@@ -53,6 +53,10 @@ Create tables for runtime versions, issues, worktrees, attempts, failures, mutat
 
 ### P0-006 Create shared schema package
 
+Status: done
+Branch: `feature/P0-006-create-shared-schema-package`
+PR: `#6`
+
 Add Zod schemas for role outputs and shared enums.
 
 ### P0-007 Create logging and structured event utility
