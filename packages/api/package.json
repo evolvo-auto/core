@@ -8,7 +8,8 @@
     "./database-url": "./src/database-url.ts",
     "./github-audit-event": "./src/github-audit-event.ts",
     "./issue-record": "./src/issue-record.ts",
-    "./model-invocation": "./src/model-invocation.ts"
+    "./model-invocation": "./src/model-invocation.ts",
+    "./worktree-record": "./src/worktree-record.ts"
   },
   "scripts": {
     "build": "pnpm --dir ../.. db:generate && tsc --noEmit -p tsconfig.json",
