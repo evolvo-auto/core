@@ -13,7 +13,12 @@
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "lint": "turbo run lint",
-    "test": "turbo run test",
+    "services:down": "docker compose -f infra/compose/local-services.compose.yaml down --remove-orphans",
+    "services:logs": "docker compose -f infra/compose/local-services.compose.yaml logs --tail=100",
+    "services:ps": "docker compose -f infra/compose/local-services.compose.yaml ps",
+    "services:up": "docker compose -f infra/compose/local-services.compose.yaml up -d",
+    "services:validate": "docker compose -f infra/compose/local-services.compose.yaml config --quiet",
+    "test": "vitest run --config vitest.config.mjs infra/**/*.test.mjs && turbo run test",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
@@ -25,6 +30,7 @@
     "prettier": "^3.6.2",
     "turbo": "^2.5.8",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "yaml": "^2.8.1"
   }
 }
