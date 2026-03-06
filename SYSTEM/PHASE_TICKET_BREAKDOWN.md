@@ -372,45 +372,89 @@ once this phase is complete (including P4-011), the runtime should be able to ru
 
 ### P4-001 Implement builder orchestration
 
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
+
 Take a plan and generate coding steps.
 
 ### P4-002 Implement changed-file detection
+
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
 
 Compare builder intent vs git diff.
 
 ### P4-003 Implement evaluator runner
 
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
+
 Run install, typecheck, lint, tests, build, run, smoke checks.
 
 ### P4-004 Implement smoke test contract
+
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
 
 Support basic route/port checks and optional Playwright smoke.
 
 ### P4-005 Implement evaluator interpreter
 
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
+
 Convert raw command results into `EvaluatorOutput`.
 
 ### P4-006 Implement debug-repair loop
+
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
 
 On failure, inspect logs, patch, rerun.
 
 ### P4-007 Implement PR opening from passing worktrees
 
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
+
 Open or update PR from branch.
 
 ### P4-008 Implement issue completion summaries
+
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
 
 Post structured completion/failure summary.
 
 ### P4-009 Add evaluation labels to issue and PR
 
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
+
 Apply `eval:*` labels after evaluation.
 
 ### P4-010 Record attempt outcomes and evaluation results
 
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
+
 Persist structured outcomes.
 
 ### P4-011 Implement autonomous runtime issue loop
+
+Status: done
+Branch: `feature/P4-complete-builder-loop-and-autonomous-runtime`
+PR: `#31`
 
 Run the runtime as a long-lived loop that:
 syncs issues, selects work, reserves/uses worktrees, executes builder+evaluator flow, writes issue/PR updates, then repeats on a schedule with retry/backoff.
