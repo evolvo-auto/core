@@ -259,7 +259,14 @@ function parseStructuredOutput<TOutput = unknown>(
   } catch (error) {
     if (error instanceof ZodError) {
       throw new StructuredOutputValidationError(
-        `Model invocation schema validation failed: ${error.issues.map((issue) => issue.message).join('; ')}`
+        `Model invocation schema validation failed: ${error.issues
+          .map((issue) => {
+            const path =
+              issue.path.length > 0 ? issue.path.join('.') : '<root>';
+
+            return `${path}: ${issue.message}`;
+          })
+          .join('; ')}`
       );
     }
 
@@ -294,7 +301,12 @@ function buildRepairUserPrompt(
 ): string {
   return [
     'You previously returned output that did not satisfy the required JSON contract.',
-    'Return only valid JSON with no markdown and no additional commentary.',
+    'Return only valid JSON with no markdown, no thinking, and no additional commentary.',
+    'Do not omit required keys.',
+    'If a required array has no items, return an empty array [].',
+    'If a required boolean is uncertain, return false rather than omitting the key.',
+    'If a required string is uncertain, infer the safest non-empty string from the original prompt.',
+    'Enum fields must use one of the allowed literal values exactly as shown in the validation error.',
     '',
     `Role: ${request.role}`,
     `Task kind: ${request.taskKind}`,
@@ -317,8 +329,8 @@ function buildRepairRequest<TOutput = unknown>(
     ...request,
     responseMode: 'json',
     systemPrompt: request.systemPrompt
-      ? `${request.systemPrompt}\n\nYou must return strictly valid JSON.`
-      : 'Return strictly valid JSON.',
+      ? `${request.systemPrompt}\n\nYou must return strictly valid JSON with every required key present.`
+      : 'Return strictly valid JSON with every required key present.',
     userPrompt: buildRepairUserPrompt(
       request,
       invalidRawText,

@@ -1,0 +1,28 @@
+{
+  "name": "@evolvo/evaluation",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./evaluator-runner": "./src/evaluator-runner.ts",
+    "./smoke-contract": "./src/smoke-contract.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "clean": "git clean -fdX .",
+    "lint": "eslint . --max-warnings 0 --no-error-on-unmatched-pattern",
+    "test": "vitest run --root . --config ../../vitest.config.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@evolvo/api": "workspace:*",
+    "@evolvo/core": "workspace:*",
+    "@evolvo/orchestration": "workspace:*",
+    "@evolvo/schemas": "workspace:*",
+    "@evolvo/worktrees": "workspace:*"
+  },
+  "devDependencies": {
+    "@evolvo/typescript-config": "workspace:*",
+    "@types/node": "^24.5.2"
+  }
+}

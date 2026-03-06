@@ -156,6 +156,54 @@ describe('model provider abstraction', () => {
     expect(invokeOnce).toHaveBeenCalledTimes(2);
   });
 
+  it('includes field-aware repair guidance when structured validation fails', async () => {
+    const invokeOnce = vi
+      .fn()
+      .mockResolvedValueOnce('{"decision":"promote","checks":{}}')
+      .mockResolvedValueOnce(
+        '{"decision":"promote","checks":{"ready":false},"notes":[]}'
+      );
+    const schema = z.object({
+      checks: z.object({
+        ready: z.boolean()
+      }),
+      decision: z.enum(['promote', 'reject']),
+      notes: z.array(z.string())
+    });
+    mockedCreateModelInvocation.mockResolvedValue({
+      id: 'inv_3b'
+    } as never);
+
+    await expect(
+      invokeWithRetryAndTimeout(
+        'ollama',
+        {
+          model: 'qwen3:30b-a3b-thinking-2507-q4_K_M',
+          role: 'planner',
+          schema,
+          userPrompt: 'Return the planner decision JSON.'
+        },
+        invokeOnce
+      )
+    ).resolves.toMatchObject({
+      repairAttempted: true,
+      repairSucceeded: true
+    });
+
+    const repairRequest = invokeOnce.mock.calls[1]?.[0];
+
+    expect(repairRequest?.userPrompt).toContain(
+      'checks.ready: Invalid input: expected boolean, received undefined'
+    );
+    expect(repairRequest?.userPrompt).toContain(
+      'notes: Invalid input: expected array, received undefined'
+    );
+    expect(repairRequest?.userPrompt).toContain('Do not omit required keys.');
+    expect(repairRequest?.systemPrompt).toContain(
+      'Return strictly valid JSON with every required key present.'
+    );
+  });
+
   it('retries failed attempts until one succeeds', async () => {
     const invokeOnce = vi
       .fn()

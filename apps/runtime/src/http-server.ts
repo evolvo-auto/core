@@ -1,3 +1,4 @@
+import type { RuntimeLoopStatus } from '@evolvo/execution/runtime-loop';
 import {
   createServer,
   type IncomingMessage,
@@ -6,7 +7,12 @@ import {
 
 import { buildRuntimeHealth } from './health-contract.js';
 
-export function createRuntimeHandler(startedAt = new Date()) {
+export type RuntimeStatusProvider = () => RuntimeLoopStatus | undefined;
+
+export function createRuntimeHandler(
+  startedAt = new Date(),
+  getLoopStatus?: RuntimeStatusProvider
+) {
   return function runtimeHandler(
     request: IncomingMessage,
     response: ServerResponse
@@ -18,7 +24,14 @@ export function createRuntimeHandler(startedAt = new Date()) {
       response.writeHead(200, {
         'content-type': 'application/json; charset=utf-8'
       });
-      response.end(JSON.stringify(buildRuntimeHealth({ startedAt })));
+      response.end(
+        JSON.stringify(
+          buildRuntimeHealth({
+            loopStatus: getLoopStatus?.(),
+            startedAt
+          })
+        )
+      );
       return;
     }
 
@@ -37,6 +50,9 @@ export function createRuntimeHandler(startedAt = new Date()) {
   };
 }
 
-export function createRuntimeServer(startedAt = new Date()) {
-  return createServer(createRuntimeHandler(startedAt));
+export function createRuntimeServer(
+  startedAt = new Date(),
+  getLoopStatus?: RuntimeStatusProvider
+) {
+  return createServer(createRuntimeHandler(startedAt, getLoopStatus));
 }

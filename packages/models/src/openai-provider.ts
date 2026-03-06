@@ -12,17 +12,26 @@ import {
 
 const emptyObject = {};
 
-type OpenAIMessage = {
-  content: string;
-  role: 'system' | 'user';
+type OpenAITextFormat =
+  | {
+      type: 'json_object';
+    }
+  | {
+      type: 'text';
+    };
+
+type OpenAIResponseOutputText = {
+  text: string;
+  type: 'output_text';
 };
 
 type OpenAIRequestPayload = {
-  max_completion_tokens?: number;
-  messages: OpenAIMessage[];
+  input: string;
+  instructions?: string;
+  max_output_tokens?: number;
   model: string;
-  response_format?: {
-    type: 'json_object';
+  text?: {
+    format: OpenAITextFormat;
   };
   temperature?: number;
 };
@@ -63,42 +72,43 @@ function normalizeApiKey(apiKey: string): string {
   return normalizedApiKey;
 }
 
-function buildMessages(
-  systemPrompt: string | undefined,
-  userPrompt: string
-): OpenAIMessage[] {
-  const messages: OpenAIMessage[] = [];
+function modelSupportsTemperature(model: string): boolean {
+  const normalizedModel = model.trim().toLowerCase();
 
-  if (systemPrompt) {
-    messages.push({
-      content: systemPrompt,
-      role: 'system'
-    });
+  if (!normalizedModel) {
+    return true;
   }
 
-  messages.push({
-    content: userPrompt,
-    role: 'user'
-  });
+  if (
+    normalizedModel === 'gpt-5' ||
+    normalizedModel.startsWith('gpt-5-') ||
+    normalizedModel.startsWith('gpt-5.')
+  ) {
+    return false;
+  }
 
-  return messages;
+  return !/^o\d/.test(normalizedModel);
 }
 
 function buildOpenAIRequestPayload(
   request: ProviderInvocationRequest
 ): OpenAIRequestPayload {
   return {
-    ...(request.maxTokens ? { max_completion_tokens: request.maxTokens } : {}),
-    messages: buildMessages(request.systemPrompt, request.userPrompt),
+    input: request.userPrompt,
+    ...(request.systemPrompt ? { instructions: request.systemPrompt } : {}),
+    ...(request.maxTokens ? { max_output_tokens: request.maxTokens } : {}),
     model: request.model,
     ...(request.responseMode === 'json'
       ? {
-          response_format: {
-            type: 'json_object'
+          text: {
+            format: {
+              type: 'json_object'
+            }
           }
         }
       : {}),
-    ...(request.temperature !== undefined
+    ...(request.temperature !== undefined &&
+    modelSupportsTemperature(request.model)
       ? { temperature: request.temperature }
       : {})
   };
@@ -109,47 +119,48 @@ function extractOpenAIResponseText(responseBody: unknown): string {
     throw new Error('OpenAI response body must be an object.');
   }
 
-  const choices = responseBody.choices;
+  const output = responseBody.output;
 
-  if (!Array.isArray(choices) || choices.length === 0) {
-    throw new Error('OpenAI response did not include any choices.');
+  if (!Array.isArray(output) || output.length === 0) {
+    throw new Error('OpenAI response did not include any output items.');
   }
 
-  const firstChoice = choices[0];
-
-  if (!isRecord(firstChoice) || !isRecord(firstChoice.message)) {
-    throw new Error('OpenAI response did not include a message payload.');
-  }
-
-  const content = firstChoice.message.content;
-
-  if (typeof content === 'string') {
-    const normalizedContent = content.trim();
-
-    if (!normalizedContent) {
-      throw new Error('OpenAI response message content was empty.');
+  const outputTexts = output.flatMap((item) => {
+    if (!isRecord(item) || item.type !== 'message') {
+      return [];
     }
 
-    return normalizedContent;
-  }
+    const content = item.content;
 
-  if (!Array.isArray(content)) {
-    throw new Error('OpenAI response message content was not string-like.');
-  }
+    if (!Array.isArray(content)) {
+      return [];
+    }
 
-  const contentFromParts = content
-    .map((part) => {
-      if (!isRecord(part) || typeof part.text !== 'string') {
-        return '';
+    return content.flatMap((part): OpenAIResponseOutputText[] => {
+      if (
+        !isRecord(part) ||
+        part.type !== 'output_text' ||
+        typeof part.text !== 'string'
+      ) {
+        return [];
       }
 
-      return part.text;
-    })
+      return [
+        {
+          text: part.text,
+          type: 'output_text'
+        }
+      ];
+    });
+  });
+
+  const contentFromParts = outputTexts
+    .map((part) => part.text)
     .join('')
     .trim();
 
   if (!contentFromParts) {
-    throw new Error('OpenAI response message content parts were empty.');
+    throw new Error('OpenAI response did not include any output_text content.');
   }
 
   return contentFromParts;
@@ -215,7 +226,7 @@ export function createOpenAIProvider(
       request: ModelProviderInvocationRequest<TOutput>
     ) =>
       invokeWithRetryAndTimeout('openai', request, async (nextRequest, signal) => {
-        const response = await fetchImplementation(`${baseUrl}/chat/completions`, {
+        const response = await fetchImplementation(`${baseUrl}/responses`, {
           body: JSON.stringify(buildOpenAIRequestPayload(nextRequest)),
           headers: {
             authorization: `Bearer ${apiKey}`,

@@ -13,17 +13,70 @@ const positiveIntegerSchema = z.number().int().positive();
 const nonNegativeIntegerSchema = z.number().int().min(0);
 const checkResultSchema = z.enum(['passed', 'failed', 'skipped']);
 
+function isRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function slugifyCommandPart(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function deriveCommandSuggestionName(command: string): string {
+  const normalizedCommand = command.trim();
+
+  if (!normalizedCommand) {
+    return 'suggested-command';
+  }
+
+  const derivedParts = normalizedCommand
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(slugifyCommandPart)
+    .filter((part) => part.length > 0);
+
+  if (derivedParts.length === 0) {
+    return 'suggested-command';
+  }
+
+  return derivedParts.join('-');
+}
+
 const rootCauseSchema = z.object({
   cause: nonEmptyStringSchema,
   confidence: scoreSchema
 });
 
-const commandSuggestionSchema = z.object({
+const commandSuggestionObjectSchema = z.object({
   name: nonEmptyStringSchema,
   command: nonEmptyStringSchema,
   cwd: nonEmptyStringSchema.optional(),
   timeoutMs: positiveIntegerSchema.optional()
 });
+
+export const commandSuggestionSchema = z.preprocess((value) => {
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const command =
+    typeof value.command === 'string' ? value.command.trim() : '';
+  const name = typeof value.name === 'string' ? value.name.trim() : '';
+
+  if (!command || name) {
+    return value;
+  }
+
+  return {
+    ...value,
+    name: deriveCommandSuggestionName(command)
+  };
+}, commandSuggestionObjectSchema);
 
 export const plannerOutputSchema = z
   .object({
