@@ -4,9 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./artifact-persistence": "./src/artifact-persistence.ts",
+    "./attempt-journal": "./src/attempt-journal.ts",
+    "./blocker-handling": "./src/blocker-handling.ts",
     "./branch-name": "./src/branch-name.ts",
+    "./cleanup": "./src/cleanup.ts",
     "./command-runner": "./src/command-runner.ts",
     "./creation": "./src/creation.ts",
+    "./execution-engine": "./src/execution-engine.ts",
     "./hydration": "./src/hydration.ts",
     "./reservation": "./src/reservation.ts"
   },
@@ -18,7 +23,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@evolvo/api": "workspace:*"
+    "@evolvo/api": "workspace:*",
+    "@evolvo/github": "workspace:*"
   },
   "devDependencies": {
     "@evolvo/typescript-config": "workspace:*"

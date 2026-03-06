@@ -82,6 +82,9 @@ describe('hydrateWorktree', () => {
         id: 'wt_500',
         status: 'ACTIVE'
       });
+    const createAttempt = vi.fn().mockResolvedValue({
+      id: 'att_500'
+    });
     const runToolCommand = vi.fn(async ({ args, command }) => {
       if (command === 'node' && args[0] === '--version') {
         return okResult(command, args, 'v22.19.0\n');
@@ -107,6 +110,7 @@ describe('hydrateWorktree', () => {
         worktreeId: 'wt_500'
       },
       {
+        createAttempt,
         getRecordById,
         runToolCommand,
         updateRecord
@@ -122,17 +126,25 @@ describe('hydrateWorktree', () => {
       id: 'wt_500',
       status: 'ACTIVE'
     });
+    expect(createAttempt).toHaveBeenCalledWith({
+      evaluationStatus: 'PENDING',
+      issueNumber: 500,
+      summary: 'Hydration started.',
+      worktreeId: 'wt_500'
+    });
     expect(runToolCommand).toHaveBeenCalledWith({
       args: ['install', '--frozen-lockfile'],
       command: 'pnpm',
       cwd: worktreePath
     });
+    expect(result.attemptId).toBe('att_500');
 
     const attemptJournal = JSON.parse(
       await readFile(result.attemptJournalPath, 'utf-8')
     ) as {
-      stage: string;
-      steps: Array<{ name: string; status: string }>;
+      attemptId: string;
+      notes: Array<{ message: string }>;
+      statusTransitions: Array<{ fromStatus?: string; toStatus: string }>;
       worktreeId: string;
     };
     const environmentFingerprint = JSON.parse(
@@ -141,13 +153,21 @@ describe('hydrateWorktree', () => {
       branchName: string;
       nodeVersion: string;
       pnpmVersion: string;
+      worktreeAttemptId: string;
       worktreeId: string;
     };
 
+    expect(attemptJournal.attemptId).toBe('att_500');
     expect(attemptJournal.worktreeId).toBe('wt_500');
-    expect(attemptJournal.stage).toBe('hydrating');
-    expect(attemptJournal.steps.at(-1)?.name).toBe('install-dependencies');
+    expect(attemptJournal.notes.map((note) => note.message)).toContain(
+      'Dependencies installed during hydration.'
+    );
+    expect(attemptJournal.statusTransitions.at(-1)).toMatchObject({
+      fromStatus: 'HYDRATING',
+      toStatus: 'ACTIVE'
+    });
     expect(environmentFingerprint.worktreeId).toBe('wt_500');
+    expect(environmentFingerprint.worktreeAttemptId).toBe('att_500');
     expect(environmentFingerprint.branchName).toBe('issue/500-improve-hydration');
     expect(environmentFingerprint.nodeVersion).toBe('v22.19.0');
     expect(environmentFingerprint.pnpmVersion).toBe('10.28.1');
@@ -178,6 +198,9 @@ describe('hydrateWorktree', () => {
         id: 'wt_501',
         status: 'ACTIVE'
       });
+    const createAttempt = vi.fn().mockResolvedValue({
+      id: 'att_501'
+    });
     const runToolCommand = vi.fn(async ({ args, command }) => {
       if (command === 'node' && args[0] === '--version') {
         return okResult(command, args, 'v22.19.0\n');
@@ -199,6 +222,7 @@ describe('hydrateWorktree', () => {
         worktreeId: 'wt_501'
       },
       {
+        createAttempt,
         getRecordById,
         runToolCommand,
         updateRecord
@@ -212,6 +236,12 @@ describe('hydrateWorktree', () => {
           call.command === 'pnpm' && Array.isArray(call.args) && call.args[0] === 'install'
       )
     ).toBe(false);
+    expect(createAttempt).toHaveBeenCalledWith({
+      evaluationStatus: 'PENDING',
+      issueNumber: 501,
+      summary: 'Hydration started.',
+      worktreeId: 'wt_501'
+    });
   });
 
   it('marks the worktree as failed when hydration cannot verify repository shape', async () => {
@@ -238,6 +268,7 @@ describe('hydrateWorktree', () => {
         id: 'wt_502',
         status: 'FAILED'
       });
+    const createAttempt = vi.fn();
     const runToolCommand = vi.fn();
 
     await expect(
@@ -246,6 +277,7 @@ describe('hydrateWorktree', () => {
           worktreeId: 'wt_502'
         },
         {
+          createAttempt,
           getRecordById,
           runToolCommand,
           updateRecord
@@ -259,6 +291,7 @@ describe('hydrateWorktree', () => {
       id: 'wt_502',
       status: 'FAILED'
     });
+    expect(createAttempt).not.toHaveBeenCalled();
     expect(runToolCommand).not.toHaveBeenCalled();
   });
 });
