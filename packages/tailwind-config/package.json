@@ -1,0 +1,21 @@
+{
+  "name": "@evolvo/tailwind-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./postcss": "./postcss.config.mjs",
+    "./shared-styles.css": "./shared-styles.css"
+  },
+  "scripts": {
+    "build": "node --eval \"\"",
+    "clean": "git clean -fdX .",
+    "lint": "eslint . --max-warnings 0 --no-error-on-unmatched-pattern",
+    "test": "vitest run --passWithNoTests --root . --config ../../vitest.config.mjs",
+    "typecheck": "node --eval \"\""
+  },
+  "devDependencies": {
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1"
+  }
+}

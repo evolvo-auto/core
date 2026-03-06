@@ -8,7 +8,7 @@ export default defineConfig({
     },
     environment: 'node',
     globals: false,
-    include: ['**/*.test.{js,mjs,cjs,ts,mts,cts}'],
+    include: ['**/*.test.{js,mjs,cjs,ts,mts,cts,tsx,mtsx,ctsx}'],
     passWithNoTests: true
   }
 });

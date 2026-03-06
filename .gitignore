@@ -4,6 +4,8 @@ node_modules
 coverage
 dist
 .next
+.next-docs
 .env
+*.tsbuildinfo
 packages/api/src/generated
 .DS_Store

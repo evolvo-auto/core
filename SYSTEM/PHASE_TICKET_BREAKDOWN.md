@@ -77,6 +77,10 @@ Add environment/config loading for GitHub, OpenAI, Ollama, Postgres.
 
 ### P0-009 Create dashboard shell
 
+Status: done
+Branch: `feature/P0-009-create-dashboard-shell`
+PR: `#9`
+
 Create minimal Next.js dashboard with health overview.
 
 ### P0-010 Add health endpoint contracts
