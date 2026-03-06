@@ -1,0 +1,24 @@
+model FailureRecord {
+  id                  String                   @id @default(cuid())
+  attemptId           String                   @map("attempt_id")
+  issueNumber         Int                      @map("issue_number")
+  phase               FailurePhase
+  symptom             String                   @db.Text
+  rootCauseHypotheses Json                     @map("root_cause_hypotheses")
+  confirmedRootCause  String?                  @db.Text @map("confirmed_root_cause")
+  severity            RiskLevel
+  recurrenceGroup     String?                  @map("recurrence_group")
+  recurrenceCount     Int                      @default(1) @map("recurrence_count")
+  isSystemic          Boolean                  @default(false) @map("is_systemic")
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+
+  attempt          Attempt                   @relation(fields: [attemptId], references: [id])
+  issue            IssueRecord               @relation(fields: [issueNumber], references: [githubIssueNumber])
+  sourceMutations  MutationProposalFailure[]
+
+  @@index([attemptId])
+  @@index([issueNumber])
+  @@index([recurrenceGroup])
+  @@map("failures")
+}

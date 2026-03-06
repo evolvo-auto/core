@@ -1,0 +1,23 @@
+model BenchmarkRun {
+  id               String           @id @default(cuid())
+  benchmarkKey     String           @map("benchmark_key")
+  issueNumber      Int?             @map("issue_number")
+  attemptId        String?          @map("attempt_id")
+  runtimeVersionId String?          @map("runtime_version_id")
+  startedAt        DateTime         @default(now()) @map("started_at")
+  endedAt          DateTime?        @map("ended_at")
+  outcome          BenchmarkOutcome
+  score            Float?
+  metricsJson      Json?            @map("metrics_json")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  issue          IssueRecord?     @relation(fields: [issueNumber], references: [githubIssueNumber])
+  attempt        Attempt?         @relation(fields: [attemptId], references: [id])
+  runtimeVersion RuntimeVersion?  @relation(fields: [runtimeVersionId], references: [id])
+
+  @@index([benchmarkKey])
+  @@index([attemptId])
+  @@index([runtimeVersionId])
+  @@map("benchmark_runs")
+}

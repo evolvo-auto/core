@@ -1,0 +1,22 @@
+model ModelInvocation {
+  id           String        @id @default(cuid())
+  attemptId    String?       @map("attempt_id")
+  role         String
+  provider     ModelProvider
+  model        String
+  taskKind     String        @map("task_kind")
+  promptHash   String?       @map("prompt_hash")
+  durationMs   Int           @map("duration_ms")
+  success      Boolean
+  schemaValid  Boolean?      @map("schema_valid")
+  fallbackUsed Boolean       @default(false) @map("fallback_used")
+  costEstimate Float?        @map("cost_estimate")
+  metadataJson Json?         @map("metadata_json")
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  attempt Attempt? @relation(fields: [attemptId], references: [id])
+
+  @@index([attemptId])
+  @@index([role, provider, model])
+  @@map("model_invocations")
+}

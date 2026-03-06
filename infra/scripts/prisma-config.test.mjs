@@ -23,8 +23,8 @@ describe('prisma config', () => {
     expect(config.datasource.url).toBe(
       'postgresql://evolvo:evolvo@localhost:5432/evolvo?schema=public'
     );
-    expect(source).toContain("engine: 'classic'");
+    expect(source).toContain("schema: 'packages/api/prisma/'");
     expect(config.migrations.path).toBe('packages/api/prisma/migrations');
-    expect(config.schema).toBe('packages/api/prisma/schema.prisma');
+    expect(config.schema).toBe('packages/api/prisma/');
   });
 });

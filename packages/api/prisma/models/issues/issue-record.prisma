@@ -1,0 +1,27 @@
+model IssueRecord {
+  githubIssueNumber Int                @id @map("github_issue_number")
+  title             String
+  currentLabels     String[]           @default([]) @map("current_labels")
+  state             IssueWorkflowState
+  kind              IssueKind
+  source            IssueSource
+  priorityScore     Float?             @map("priority_score")
+  riskLevel         RiskLevel?         @map("risk_level")
+  linkedBranch      String?            @map("linked_branch")
+  linkedWorktreeId  String?            @map("linked_worktree_id")
+  lastSyncedAt      DateTime           @default(now()) @map("last_synced_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  sourceRuntimeVersions RuntimeVersion[]
+  worktrees             WorktreeRecord[]
+  attempts              Attempt[]
+  failures              FailureRecord[]
+  mutationProposals     MutationProposal[]
+  benchmarkRuns         BenchmarkRun[]
+
+  @@index([kind])
+  @@index([state])
+  @@index([source])
+  @@map("issues")
+}

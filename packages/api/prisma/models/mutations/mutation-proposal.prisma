@@ -1,0 +1,27 @@
+model MutationProposal {
+  id                    String          @id @default(cuid())
+  sourceIssueNumber     Int?            @map("source_issue_number")
+  targetSurface         Surface         @map("target_surface")
+  title                 String
+  rationale             String          @db.Text
+  predictedBenefit      String?         @db.Text @map("predicted_benefit")
+  predictedRisk         String?         @db.Text @map("predicted_risk")
+  validationPlan        Json            @map("validation_plan")
+  state                 MutationState
+  confidenceScore       Int?            @map("confidence_score")
+  priorityScore         Int?            @map("priority_score")
+  implementationPlan    String?         @db.Text @map("implementation_plan")
+  rollbackConsiderations String?        @db.Text @map("rollback_considerations")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  sourceIssue           IssueRecord?             @relation(fields: [sourceIssueNumber], references: [githubIssueNumber])
+  sourceFailures        MutationProposalFailure[]
+  outcomes              MutationOutcome[]
+  sourcedRuntimeVersions RuntimeVersion[]        @relation("SourceMutationVersions")
+
+  @@index([sourceIssueNumber])
+  @@index([targetSurface])
+  @@index([state])
+  @@map("mutation_proposals")
+}
