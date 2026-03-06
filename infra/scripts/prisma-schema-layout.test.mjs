@@ -24,7 +24,9 @@ describe('split Prisma schema layout', () => {
     expect(topLevelEntries.some((entry) => entry.isDirectory())).toBe(true);
 
     const expectedFiles = [
+      'benchmarks/benchmark-definition.prisma',
       'benchmarks/benchmark-run.prisma',
+      'challenges/challenge-record.prisma',
       'execution/attempt.prisma',
       'failures/failure-record.prisma',
       'github/github-audit-event.prisma',

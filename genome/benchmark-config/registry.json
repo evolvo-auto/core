@@ -1,0 +1,64 @@
+{
+  "benchmarks": [
+    {
+      "benchmarkKey": "core-runtime-smoke",
+      "title": "Core runtime smoke",
+      "benchmarkType": "fixed",
+      "familyKey": "core-stability",
+      "capabilityTags": ["runtime", "testing"],
+      "definition": {
+        "intent": "Verify the runtime and dashboard complete the baseline local smoke path.",
+        "artifactExpectations": ["Passing build output", "Healthy runtime loop", "Reachable dashboard route"],
+        "validationSteps": [
+          "pnpm lint",
+          "pnpm test",
+          "pnpm --filter @evolvo/dashboard build"
+        ],
+        "scoringNotes": ["Bias toward broad runtime stability over feature-specific gains."]
+      },
+      "scoringConfig": {
+        "weight": 1
+      }
+    },
+    {
+      "benchmarkKey": "typescript-regression-pack",
+      "title": "TypeScript regression pack",
+      "benchmarkType": "regression-pack",
+      "familyKey": "capability-typescript",
+      "capabilityTags": ["typescript", "debugging"],
+      "isRegressionPack": true,
+      "definition": {
+        "intent": "Catch regressions in TypeScript, schema, and runtime build integrity.",
+        "artifactExpectations": ["Passing typecheck", "Stable schema generation"],
+        "validationSteps": [
+          "pnpm typecheck",
+          "pnpm --filter @evolvo/api test"
+        ],
+        "scoringNotes": ["Regression packs should be sticky and hard to game."]
+      },
+      "scoringConfig": {
+        "weight": 1.2
+      }
+    },
+    {
+      "benchmarkKey": "nextjs-holdout-pack",
+      "title": "Next.js holdout pack",
+      "benchmarkType": "holdout-pack",
+      "familyKey": "capability-nextjs",
+      "capabilityTags": ["nextjs", "testing"],
+      "isHoldout": true,
+      "definition": {
+        "intent": "Preserve a lighter-used Next.js path to detect overfitting.",
+        "artifactExpectations": ["Dashboard renders", "No SSR hydration regressions"],
+        "validationSteps": [
+          "pnpm --filter @evolvo/dashboard test",
+          "pnpm --filter @evolvo/dashboard build"
+        ],
+        "scoringNotes": ["Holdout packs should not be the primary optimization target."]
+      },
+      "scoringConfig": {
+        "weight": 1.15
+      }
+    }
+  ]
+}

@@ -35,6 +35,8 @@
   },
   "dependencies": {
     "@evolvo/api": "workspace:*",
+    "@evolvo/benchmarks": "workspace:*",
+    "@evolvo/challenges": "workspace:*",
     "@evolvo/core": "workspace:*",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "octokit": "^5.0.5"

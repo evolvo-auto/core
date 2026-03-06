@@ -20,6 +20,7 @@ model MutationProposal {
   sourceFailures        MutationProposalFailure[]
   outcomes              MutationOutcome[]
   sourcedRuntimeVersions RuntimeVersion[]        @relation("SourceMutationVersions")
+  sourcedBenchmarkDefinitions BenchmarkDefinition[] @relation("BenchmarkSourceMutation")
 
   @@index([sourceIssueNumber])
   @@index([linkedIssueNumber])

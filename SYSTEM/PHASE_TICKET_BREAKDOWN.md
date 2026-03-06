@@ -555,41 +555,81 @@ stable self-improvement pressure.
 
 ### P6-001 Implement challenge ingestion
 
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
+
 Parse issues labeled `human-made-challenge` and `evolvo-made-challenge`.
 
 ### P6-002 Create challenge normalisation
+
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
 
 Store challenge definition internally with validation expectations.
 
 ### P6-003 Implement benchmark registry
 
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
+
 Support named benchmarks and versions.
 
 ### P6-004 Create benchmark runner
+
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
 
 Run benchmark sets against attempts or runtime candidates.
 
 ### P6-005 Persist benchmark results
 
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
+
 Track score, pass/fail, runtime version, and issue linkage.
 
 ### P6-006 Implement regression pack support
+
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
 
 Run targeted validation against previously successful capability areas.
 
 ### P6-007 Implement holdout benchmark support
 
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
+
 Reserve some tasks for overfitting detection.
 
 ### P6-008 Add benchmark lineage
+
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
 
 Support benchmark versioning and mutation history.
 
 ### P6-009 Add benchmark dashboard trends
 
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
+
 Show deltas over time and by runtime version.
 
 ### P6-010 Implement Evolvo-created challenge generation
+
+Status: done
+Branch: `feature/P6-complete-challenge-and-benchmark-engine`
+PR: `#34`
 
 Allow system to create challenge issues to test its weaknesses.
 

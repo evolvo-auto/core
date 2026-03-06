@@ -1,6 +1,9 @@
 model BenchmarkRun {
   id               String           @id @default(cuid())
+  benchmarkId       String?          @map("benchmark_id")
   benchmarkKey     String           @map("benchmark_key")
+  benchmarkVersion Int?             @map("benchmark_version")
+  benchmarkType    BenchmarkType?   @map("benchmark_type")
   issueNumber      Int?             @map("issue_number")
   attemptId        String?          @map("attempt_id")
   runtimeVersionId String?          @map("runtime_version_id")
@@ -8,15 +11,21 @@ model BenchmarkRun {
   endedAt          DateTime?        @map("ended_at")
   outcome          BenchmarkOutcome
   score            Float?
+  durationMs       Int?             @map("duration_ms")
+  retryCount       Int              @default(0) @map("retry_count")
+  regressionCount  Int              @default(0) @map("regression_count")
   metricsJson      Json?            @map("metrics_json")
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
+  benchmark      BenchmarkDefinition? @relation(fields: [benchmarkId], references: [id])
   issue          IssueRecord?     @relation(fields: [issueNumber], references: [githubIssueNumber])
   attempt        Attempt?         @relation(fields: [attemptId], references: [id])
   runtimeVersion RuntimeVersion?  @relation(fields: [runtimeVersionId], references: [id])
 
+  @@index([benchmarkId])
   @@index([benchmarkKey])
+  @@index([benchmarkType])
   @@index([attemptId])
   @@index([runtimeVersionId])
   @@map("benchmark_runs")

@@ -1,5 +1,6 @@
 import { updateAttemptRecord } from '@evolvo/api/attempt-record';
 import { updateIssueRecord } from '@evolvo/api/issue-record';
+import { runBenchmarkSuite, type RunBenchmarkSuiteResult } from '@evolvo/benchmarks/runner';
 import {
   findActiveWorktreeForIssue,
   updateWorktreeRecord
@@ -104,6 +105,7 @@ export type ExecuteIssueAttemptDependencies = {
   planner?: typeof runPlannerRole;
   builder?: typeof runBuilderOrchestration;
   evaluationRunner?: typeof runEvaluation;
+  runBenchmarks?: typeof runBenchmarkSuite;
   critic?: typeof runCriticRole;
   reserve?: typeof reserveWorktree;
   persistArtifacts?: typeof persistWorktreeArtifacts;
@@ -435,6 +437,7 @@ export async function executeIssueAttempt(
   const planner = dependencies.planner ?? runPlannerRole;
   const builder = dependencies.builder ?? runBuilderOrchestration;
   const evaluationRunner = dependencies.evaluationRunner ?? runEvaluation;
+  const runBenchmarks = dependencies.runBenchmarks ?? runBenchmarkSuite;
   const critic = dependencies.critic ?? runCriticRole;
   const reserve = dependencies.reserve ?? reserveWorktree;
   const persistArtifacts =
@@ -726,6 +729,7 @@ export async function executeIssueAttempt(
   const capability = resolveCapability(classification.currentLabels, plannerOutput);
 
   for (let repairAttempt = 0; repairAttempt <= maxRepairAttempts; repairAttempt += 1) {
+    const cycleStartedAt = new Date();
     logger.info({
       correlationIds: {
         attemptId: hydratedWorktree.attemptId,
@@ -838,6 +842,34 @@ export async function executeIssueAttempt(
 
     const evaluationStatus =
       mapEvaluatorOutputToEvaluationStatus(evaluationResult);
+    const cycleCompletedAt = new Date();
+    const benchmarkResult: RunBenchmarkSuiteResult = await runBenchmarks({
+      attemptId: hydratedWorktree.attemptId,
+      builderResult: {
+        filesActuallyChanged: builderResult.builderOutput.filesActuallyChanged,
+        summary: builderResult.builderOutput.summary
+      },
+      capabilityTags:
+        plannerOutput.capabilityTags.length > 0
+          ? plannerOutput.capabilityTags
+          : [capability],
+      cycleCompletedAt,
+      cycleStartedAt,
+      evaluationResult: {
+        checkResults: evaluationResult.checkResults.map((checkResult) => ({
+          name: checkResult.name,
+          result: checkResult.result
+        })),
+        evaluatorOutput: {
+          outcome: evaluationResult.evaluatorOutput.outcome,
+          regressionRisk: evaluationResult.evaluatorOutput.regressionRisk,
+          summary: evaluationResult.evaluatorOutput.summary
+        },
+        observedFailures: evaluationResult.observedFailures
+      },
+      issueNumber: issue.number,
+      repairAttempt
+    });
 
     await syncIssueEvalLabel(
       issue.number,
@@ -862,8 +894,11 @@ export async function executeIssueAttempt(
         regressionRisk: evaluationResult.evaluatorOutput.regressionRisk,
         shouldOpenPR: evaluationResult.evaluatorOutput.shouldOpenPR,
         checks: summarizeCheckResults(evaluationResult),
+        benchmarkAverageScore: benchmarkResult.averageScore,
+        benchmarkCount: benchmarkResult.benchmarkRuns.length,
         ...(includeVerboseData
           ? {
+              benchmarkKeys: benchmarkResult.selectedBenchmarkKeys,
               observedFailures: evaluationResult.observedFailures
             }
           : {})

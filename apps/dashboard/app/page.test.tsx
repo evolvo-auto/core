@@ -28,6 +28,10 @@ vi.mock('./components/platform-health-board', () => ({
   default: () => <section>Platform health board</section>
 }));
 
+vi.mock('./components/benchmark-board', () => ({
+  default: () => <section>Benchmark board</section>
+}));
+
 vi.mock('./components/failure-memory-board', () => ({
   default: () => <section>Failure memory board</section>
 }));
@@ -49,6 +53,24 @@ vi.mock('./lib/build-failure-memory-snapshot', () => ({
       totalFailures: 0,
       weakCapabilities: 0
     }
+  })
+}));
+
+vi.mock('./lib/build-benchmark-snapshot', () => ({
+  buildBenchmarkSnapshot: vi.fn().mockResolvedValue({
+    challenges: [],
+    generatedAt: '2026-03-06T12:00:00.000Z',
+    recentRuns: [],
+    summary: {
+      activeBenchmarks: 3,
+      averageScore: 88,
+      challengeBenchmarks: 1,
+      holdoutBenchmarks: 1,
+      regressedRuns: 0,
+      regressionPacks: 1,
+      totalRuns: 2
+    },
+    trends: []
   })
 }));
 
@@ -155,6 +177,7 @@ describe('DashboardPage', () => {
     expect(markup).toContain('Authoritative health probes');
     expect(markup).toContain('Platform health board');
     expect(markup).toContain('Worktree board');
+    expect(markup).toContain('Benchmark board');
     expect(markup).toContain('Failure memory board');
     expect(markup).not.toContain('style=');
   });

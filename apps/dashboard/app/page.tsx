@@ -1,3 +1,4 @@
+import { benchmarkSnapshotQueryKey } from '@evolvo/query/benchmarks';
 import * as React from 'react';
 import {
   dehydrate,
@@ -9,9 +10,11 @@ import { platformHealthQueryKey } from '@evolvo/query/health';
 import { worktreeSnapshotQueryKey } from '@evolvo/query/worktrees';
 import type { PlatformHealthSnapshot } from '@evolvo/schemas/health-schemas';
 
+import BenchmarkBoard from './components/benchmark-board';
 import FailureMemoryBoard from './components/failure-memory-board';
 import PlatformHealthBoard from './components/platform-health-board';
 import WorktreeBoard from './components/worktree-board';
+import { buildBenchmarkSnapshot } from './lib/build-benchmark-snapshot';
 import { buildFailureMemorySnapshot } from './lib/build-failure-memory-snapshot';
 import { buildPlatformHealthSnapshot } from './lib/build-platform-health-snapshot';
 import { buildWorktreeSnapshot } from './lib/build-worktree-snapshot';
@@ -46,6 +49,10 @@ function getHealthSummary(snapshot: PlatformHealthSnapshot) {
 export default async function DashboardPage() {
   const queryClient = new QueryClient();
 
+  await queryClient.prefetchQuery({
+    queryFn: () => buildBenchmarkSnapshot(),
+    queryKey: benchmarkSnapshotQueryKey
+  });
   await queryClient.prefetchQuery({
     queryFn: () => buildFailureMemorySnapshot(),
     queryKey: failureMemorySnapshotQueryKey
@@ -145,6 +152,9 @@ export default async function DashboardPage() {
       </HydrationBoundary>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <WorktreeBoard />
+      </HydrationBoundary>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <BenchmarkBoard />
       </HydrationBoundary>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <FailureMemoryBoard />
