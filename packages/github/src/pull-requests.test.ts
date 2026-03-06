@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { recordGitHubAuditEvent } from './audit-events.js';
 import {
   createPullRequest,
   getPullRequest,
@@ -14,6 +15,16 @@ import type {
   GitHubPullRequestListItem,
   GitHubRestClient
 } from './types.js';
+
+vi.mock('./audit-events.js', () => ({
+  recordGitHubAuditEvent: vi.fn()
+}));
+
+const mockedRecordGitHubAuditEvent = vi.mocked(recordGitHubAuditEvent);
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('GitHub pull request operations', () => {
   it('gets and lists pull requests', async () => {
@@ -67,6 +78,7 @@ describe('GitHub pull request operations', () => {
       sort: 'updated',
       state: 'open'
     });
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 
   it('creates and updates pull requests', async () => {
@@ -134,6 +146,33 @@ describe('GitHub pull request operations', () => {
       state: 'open',
       title: 'P1-001 Integrate GitHub API client'
     });
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenNthCalledWith(
+      1,
+      {
+        action: 'pull-request.created',
+        metadata: {
+          base: 'main',
+          draft: true,
+          head: 'feature/P1-001-integrate-github-api-client',
+          title: 'P1-001 Integrate GitHub API client'
+        },
+        pullRequestNumber: 11
+      },
+      context
+    );
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenNthCalledWith(
+      2,
+      {
+        action: 'pull-request.updated',
+        metadata: {
+          base: 'main',
+          state: 'open',
+          title: 'P1-001 Integrate GitHub API client'
+        },
+        pullRequestNumber: 11
+      },
+      context
+    );
   });
 });
 
@@ -198,6 +237,19 @@ describe('upsert pull request from branch', () => {
       title: 'feat(issue-21): improve routing behavior'
     });
     expect(update).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledWith(
+      {
+        action: 'pull-request.created',
+        metadata: {
+          base: 'main',
+          draft: true,
+          head: 'issue/21-improve-routing',
+          title: 'feat(issue-21): improve routing behavior'
+        },
+        pullRequestNumber: 21
+      },
+      context
+    );
   });
 
   it('updates an existing pull request when one open pull request already matches the branch', async () => {
@@ -261,6 +313,18 @@ describe('upsert pull request from branch', () => {
       title: 'fix(issue-22): finalize PR upsert behavior'
     });
     expect(create).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledWith(
+      {
+        action: 'pull-request.updated',
+        metadata: {
+          base: 'main',
+          state: null,
+          title: 'fix(issue-22): finalize PR upsert behavior'
+        },
+        pullRequestNumber: 22
+      },
+      context
+    );
   });
 
   it('rejects blank branch names before calling GitHub', async () => {
@@ -296,6 +360,7 @@ describe('upsert pull request from branch', () => {
     expect(list).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 
   it('rejects ambiguous matches when multiple open pull requests share the same branch', async () => {
@@ -337,6 +402,7 @@ describe('upsert pull request from branch', () => {
     );
     expect(create).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 });
 
@@ -431,6 +497,25 @@ describe('sync pull request labels from issue', () => {
       owner: 'evolvo-auto',
       repo: 'core'
     });
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledWith(
+      {
+        action: 'pull-request.labels-synced',
+        issueNumber: 301,
+        metadata: {
+          mirrorPrefixes: ['kind:', 'surface:', 'risk:'],
+          mirroredLabelNames: ['kind:feature', 'surface:routing', 'risk:low'],
+          nextPullRequestLabels: [
+            'eval:pending',
+            'promotion:candidate',
+            'kind:feature',
+            'surface:routing',
+            'risk:low'
+          ]
+        },
+        pullRequestNumber: 41
+      },
+      context
+    );
   });
 
   it('supports dry-run mode without writing pull request labels', async () => {
@@ -472,6 +557,7 @@ describe('sync pull request labels from issue', () => {
     expect(result.changed).toBe(true);
     expect(result.dryRun).toBe(true);
     expect(setLabels).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 
   it('returns unchanged when pull request already has mirrored labels', async () => {
@@ -514,6 +600,7 @@ describe('sync pull request labels from issue', () => {
       'eval:passed'
     ]);
     expect(setLabels).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 
   it('supports custom mirror prefixes and rejects empty prefix configurations', async () => {
@@ -578,6 +665,19 @@ describe('sync pull request labels from issue', () => {
       owner: 'evolvo-auto',
       repo: 'core'
     });
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledWith(
+      {
+        action: 'pull-request.labels-synced',
+        issueNumber: 304,
+        metadata: {
+          mirrorPrefixes: ['source:'],
+          mirroredLabelNames: ['source:evolvo'],
+          nextPullRequestLabels: ['eval:pending', 'source:evolvo']
+        },
+        pullRequestNumber: 44
+      },
+      context
+    );
 
     await expect(
       syncPullRequestLabelsFromIssue(
@@ -591,5 +691,6 @@ describe('sync pull request labels from issue', () => {
     ).rejects.toThrow(
       'At least one pull request label mirror prefix is required.'
     );
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledTimes(1);
   });
 });

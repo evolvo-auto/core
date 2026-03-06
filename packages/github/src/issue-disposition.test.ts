@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { recordGitHubAuditEvent } from './audit-events.js';
 import {
   buildStructuredIssueComment,
   writeStructuredIssueComment
@@ -21,6 +22,11 @@ vi.mock('./issue-state.js', () => ({
   transitionIssueState: vi.fn()
 }));
 
+vi.mock('./audit-events.js', () => ({
+  recordGitHubAuditEvent: vi.fn()
+}));
+
+const mockedRecordGitHubAuditEvent = vi.mocked(recordGitHubAuditEvent);
 const mockedBuildStructuredIssueComment = vi.mocked(
   buildStructuredIssueComment
 );
@@ -95,6 +101,18 @@ describe('issue rejection/defer flow helpers', () => {
       },
       context
     );
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledWith(
+      {
+        action: 'issue.defer',
+        issueNumber: 91,
+        metadata: {
+          commentId: 901,
+          stateChanged: true,
+          targetState: 'DEFERRED'
+        }
+      },
+      context
+    );
   });
 
   it('rejects an issue by transitioning state and posting a structured reject comment', async () => {
@@ -159,6 +177,18 @@ describe('issue rejection/defer flow helpers', () => {
       },
       context
     );
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledWith(
+      {
+        action: 'issue.reject',
+        issueNumber: 92,
+        metadata: {
+          commentId: 902,
+          stateChanged: true,
+          targetState: 'REJECTED'
+        }
+      },
+      context
+    );
   });
 
   it('supports dry-run reject/defer flow without posting a comment', async () => {
@@ -205,6 +235,7 @@ describe('issue rejection/defer flow helpers', () => {
       whatChanged: undefined
     });
     expect(mockedWriteStructuredIssueComment).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 
   it('requires a non-empty status explanation for defer/reject flows', async () => {
@@ -224,5 +255,6 @@ describe('issue rejection/defer flow helpers', () => {
     expect(mockedTransitionIssueState).not.toHaveBeenCalled();
     expect(mockedBuildStructuredIssueComment).not.toHaveBeenCalled();
     expect(mockedWriteStructuredIssueComment).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 });
