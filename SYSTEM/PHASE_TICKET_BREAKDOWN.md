@@ -235,21 +235,41 @@ Persist latency, schema validity, fallback use, and outcome metadata.
 
 ### P2-007 Implement planner role
 
+Status: done
+Branch: `feature/P2-007-008-009-010-011-implement-roles`
+PR: `#26`
+
 Use issue context to produce `PlannerOutput`.
 
 ### P2-008 Implement selector role
+
+Status: done
+Branch: `feature/P2-007-008-009-010-011-implement-roles`
+PR: `#26`
 
 Choose next issue or mutation candidate.
 
 ### P2-009 Implement critic role
 
+Status: done
+Branch: `feature/P2-007-008-009-010-011-implement-roles`
+PR: `#26`
+
 Interpret logs and failures.
 
 ### P2-010 Implement mutator role
 
+Status: done
+Branch: `feature/P2-007-008-009-010-011-implement-roles`
+PR: `#26`
+
 Generate structured mutation proposals.
 
 ### P2-011 Implement narrator role
+
+Status: done
+Branch: `feature/P2-007-008-009-010-011-implement-roles`
+PR: `#26`
 
 Generate GitHub-ready comments and summaries.
 
