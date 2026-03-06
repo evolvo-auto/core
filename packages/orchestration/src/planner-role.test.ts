@@ -105,4 +105,60 @@ describe('runPlannerRole', () => {
       'Planner output issueNumber "999" did not match input issueNumber "202".'
     );
   });
+
+  it('includes explicit schema-shape guidance in the planner prompt', async () => {
+    const plannerOutput: PlannerOutput = {
+      acceptanceCriteria: ['Ship the dashboard planner flow.'],
+      assumptions: [],
+      capabilityTags: ['typescript'],
+      confidenceScore: 75,
+      constraints: [],
+      dependencies: [],
+      evaluationPlan: {
+        extraChecks: [],
+        requireBuild: false,
+        requireInstall: true,
+        requireLint: true,
+        requireRun: false,
+        requireSmoke: false,
+        requireTests: true,
+        requireTypecheck: true
+      },
+      expectedValueScore: 82,
+      issueNumber: 203,
+      kind: 'feature',
+      objective: 'Implement the planner prompt contract.',
+      reasoningSummary: 'The planner should be explicit for local models.',
+      recommendedApproach: 'direct-execution',
+      relevantSurfaces: ['runtime'],
+      riskLevel: 'medium',
+      title: 'Harden planner prompts'
+    };
+    const invokeRole = vi.fn().mockResolvedValue({
+      output: plannerOutput
+    });
+
+    await runPlannerRole(
+      {
+        issueNumber: 203,
+        title: 'Harden planner prompts'
+      },
+      invokeRole
+    );
+
+    const request = invokeRole.mock.calls[0]?.[0];
+
+    expect(request?.systemPrompt).toContain(
+      'Every required field must be present in the JSON output.'
+    );
+    expect(request?.userPrompt).toContain(
+      'Output shape template (replace the values, keep every key):'
+    );
+    expect(request?.userPrompt).toContain('"evaluationPlan"');
+    expect(request?.userPrompt).toContain('"requireInstall": true');
+    expect(request?.userPrompt).toContain('"riskLevel": "medium"');
+    expect(request?.userPrompt).toContain(
+      'recommendedApproach: direct-execution, system-mutation-first, experiment-first, defer, reject'
+    );
+  });
 });

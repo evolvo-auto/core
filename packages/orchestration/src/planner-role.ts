@@ -3,11 +3,24 @@ import {
   plannerOutputSchema,
   type PlannerOutput
 } from '@evolvo/schemas/role-output-schemas';
+import {
+  issueKinds,
+  riskLevels,
+  surfaces
+} from '@evolvo/schemas/shared-enums';
 
 import {
   invokeRoutedStructuredRole,
   type InvokeRoutedStructuredRole
 } from './role-runner.js';
+
+const recommendedApproaches = [
+  'direct-execution',
+  'system-mutation-first',
+  'experiment-first',
+  'defer',
+  'reject'
+] as const;
 
 export type PlannerRoleInput = {
   acceptanceCriteriaHints?: string[];
@@ -31,6 +44,13 @@ function buildPlannerSystemPrompt(): string {
     'Your job is to convert GitHub issue context into a precise, executable planning decision.',
     'Return only valid JSON that satisfies the PlannerOutput schema.',
     'Do not include markdown, prose outside JSON, or code fences.',
+    'Every required field must be present in the JSON output.',
+    'constraints, assumptions, acceptanceCriteria, relevantSurfaces, capabilityTags, dependencies, and evaluationPlan.extraChecks must always be arrays.',
+    'evaluationPlan.requireInstall, requireTypecheck, requireLint, requireTests, requireBuild, requireRun, and requireSmoke must always be booleans.',
+    `kind must be exactly one of: ${issueKinds.join(', ')}.`,
+    `relevantSurfaces entries must be chosen from: ${surfaces.join(', ')}.`,
+    `recommendedApproach must be exactly one of: ${recommendedApproaches.join(', ')}.`,
+    `riskLevel must be exactly one of: ${riskLevels.join(', ')}.`,
     'Infer the most concrete and valuable actionable interpretation of the issue from the provided context.',
     'Distinguish clearly between objective, constraints, assumptions, dependencies, and evaluation needs.',
     'Acceptance criteria should be specific, testable, and useful for downstream execution and evaluation.',
@@ -48,9 +68,58 @@ function buildPlannerSystemPrompt(): string {
   ].join('\n');
 }
 
+function buildPlannerOutputTemplate(input: PlannerRoleInput): string {
+  const template: PlannerOutput = {
+    acceptanceCriteria: [
+      'Replace this with a specific, observable success condition.'
+    ],
+    assumptions:
+      input.assumptions && input.assumptions.length > 0
+        ? input.assumptions
+        : ['List any important inferred assumptions, or use [].'],
+    capabilityTags:
+      input.capabilityTagsHints && input.capabilityTagsHints.length > 0
+        ? input.capabilityTagsHints
+        : ['typescript'],
+    confidenceScore: 60,
+    constraints:
+      input.constraints && input.constraints.length > 0
+        ? input.constraints
+        : ['List any hard constraints from the issue, or use [].'],
+    dependencies: input.dependencies ?? [],
+    evaluationPlan: {
+      extraChecks: ['Add issue-specific verification if needed, or use [].'],
+      requireBuild: false,
+      requireInstall: true,
+      requireLint: true,
+      requireRun: false,
+      requireSmoke: false,
+      requireTests: true,
+      requireTypecheck: true
+    },
+    expectedValueScore: 70,
+    issueNumber: input.issueNumber,
+    kind: input.kindHint ?? 'feature',
+    objective: 'Replace this with the concrete objective for the issue.',
+    reasoningSummary:
+      'Replace this with a concise evidence-based planning summary.',
+    recommendedApproach: 'direct-execution',
+    relevantSurfaces:
+      input.relevantSurfacesHints && input.relevantSurfacesHints.length > 0
+        ? input.relevantSurfacesHints
+        : ['runtime'],
+    riskLevel: 'medium',
+    title: input.title
+  };
+
+  return JSON.stringify(template, null, 2);
+}
+
 function buildPlannerUserPrompt(input: PlannerRoleInput): string {
   return [
     'Create a PlannerOutput object for this GitHub issue context.',
+    'Return a complete JSON object with every required key present.',
+    'Replace the example values in the output shape template with issue-specific values. Do not copy placeholder text literally.',
     '',
     'Your task is to determine:',
     '- what the issue is really asking for',
@@ -110,7 +179,18 @@ function buildPlannerUserPrompt(input: PlannerRoleInput): string {
     '3. acceptanceCriteria must be specific and testable unless recommendedApproach is reject.',
     '4. expectedValueScore and confidenceScore must be integers from 0 to 100.',
     '5. keep reasoningSummary concise and evidence-based.',
-    '6. return only valid JSON.'
+    '6. return only valid JSON.',
+    '7. if a required array has no items, return [].',
+    '8. do not omit any evaluationPlan booleans.',
+    '',
+    'Allowed values:',
+    `- kind: ${issueKinds.join(', ')}`,
+    `- relevantSurfaces values: ${surfaces.join(', ')}`,
+    `- recommendedApproach: ${recommendedApproaches.join(', ')}`,
+    `- riskLevel: ${riskLevels.join(', ')}`,
+    '',
+    'Output shape template (replace the values, keep every key):',
+    buildPlannerOutputTemplate(input)
   ].join('\n');
 }
 
