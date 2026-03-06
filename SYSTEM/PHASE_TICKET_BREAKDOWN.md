@@ -124,6 +124,10 @@ Read issues, normalise labels, cache relevant metadata to DB.
 
 ### P1-004 Implement issue classification
 
+Status: done
+Branch: `feature/P1-004-implement-issue-classification`
+PR: `#15`
+
 Classify issues into kinds, sources, and surfaces.
 
 ### P1-005 Add issue state transition helpers

@@ -5,6 +5,7 @@ import { parseIssueSyncCliArgs, runIssueSyncCli } from './sync-issues.js';
 
 vi.mock('./issue-sync.js', () => ({
   syncRepositoryIssues: vi.fn().mockResolvedValue({
+    classifiedIssues: [],
     dryRun: true,
     fetchedCount: 0,
     ignoredPullRequestCount: 0,
