@@ -140,6 +140,10 @@ Implement functions to safely move issues between `state:*` labels.
 
 ### P1-006 Implement issue comment writer
 
+Status: done
+Branch: `feature/P1-006-implement-issue-comment-writer`
+PR: `#17`
+
 Allow runtime to write structured progress/evaluation comments.
 
 ### P1-007 Implement PR creation/update client
