@@ -226,6 +226,32 @@ export type CreateIssueCommentInput = {
   body: RestEndpointMethodTypes['issues']['createComment']['parameters']['body'];
 };
 
+export type IssueCommentKind =
+  | 'work-started'
+  | 'progress'
+  | 'blocker'
+  | 'evaluation-result'
+  | 'mutation-rationale'
+  | 'promotion-update'
+  | 'defer'
+  | 'reject';
+
+export type StructuredIssueCommentInput = {
+  commentKind: IssueCommentKind;
+  evidence?: string[];
+  nextStep?: string;
+  status?: string;
+  title?: string;
+  whatChanged?: string[];
+};
+
+export type WriteStructuredIssueCommentResult = {
+  body: string;
+  comment: GitHubIssueComment;
+  commentKind: IssueCommentKind;
+  issueNumber: number;
+};
+
 export type CreatePullRequestInput = {
   base: CreatePullRequestParameters['base'];
   body?: CreatePullRequestParameters['body'];
