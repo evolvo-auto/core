@@ -4,6 +4,7 @@ import {
   createPullRequest,
   getPullRequest,
   listPullRequests,
+  syncPullRequestLabelsFromIssue,
   upsertPullRequestFromBranch,
   updatePullRequest
 } from './pull-requests.js';
@@ -336,5 +337,259 @@ describe('upsert pull request from branch', () => {
     );
     expect(create).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe('sync pull request labels from issue', () => {
+  it('mirrors kind/surface/risk labels from issue to pull request and preserves other pull request labels', async () => {
+    const get = vi.fn().mockResolvedValue({
+      data: {
+        labels: [
+          { name: 'kind:feature' },
+          { name: 'surface:routing' },
+          { name: 'risk:low' },
+          { name: 'state:in-progress' }
+        ]
+      }
+    });
+    const listLabelsOnIssue = vi.fn().mockResolvedValue({
+      data: [
+        { name: 'kind:bug' },
+        { name: 'surface:runtime' },
+        { name: 'risk:high' },
+        { name: 'eval:pending' },
+        { name: 'promotion:candidate' }
+      ]
+    });
+    const setLabels = vi.fn().mockResolvedValue({
+      data: [
+        { name: 'eval:pending' },
+        { name: 'promotion:candidate' },
+        { name: 'kind:feature' },
+        { name: 'surface:routing' },
+        { name: 'risk:low' }
+      ]
+    });
+    const context: GitHubContext = {
+      octokit: {
+        rest: {
+          issues: {
+            get,
+            listLabelsOnIssue,
+            setLabels
+          },
+          pulls: {}
+        }
+      } as unknown as GitHubRestClient,
+      repository: {
+        owner: 'evolvo-auto',
+        repo: 'core'
+      }
+    };
+
+    expect(await syncPullRequestLabelsFromIssue(301, 41, {}, context)).toEqual({
+      changed: true,
+      currentPullRequestLabels: [
+        'kind:bug',
+        'surface:runtime',
+        'risk:high',
+        'eval:pending',
+        'promotion:candidate'
+      ],
+      dryRun: false,
+      issueNumber: 301,
+      mirroredLabelNames: ['kind:feature', 'surface:routing', 'risk:low'],
+      nextPullRequestLabels: [
+        'eval:pending',
+        'promotion:candidate',
+        'kind:feature',
+        'surface:routing',
+        'risk:low'
+      ],
+      pullRequestNumber: 41
+    });
+    expect(get).toHaveBeenCalledWith({
+      issue_number: 301,
+      owner: 'evolvo-auto',
+      repo: 'core'
+    });
+    expect(listLabelsOnIssue).toHaveBeenCalledWith({
+      issue_number: 41,
+      owner: 'evolvo-auto',
+      per_page: 100,
+      repo: 'core'
+    });
+    expect(setLabels).toHaveBeenCalledWith({
+      issue_number: 41,
+      labels: [
+        'eval:pending',
+        'promotion:candidate',
+        'kind:feature',
+        'surface:routing',
+        'risk:low'
+      ],
+      owner: 'evolvo-auto',
+      repo: 'core'
+    });
+  });
+
+  it('supports dry-run mode without writing pull request labels', async () => {
+    const get = vi.fn().mockResolvedValue({
+      data: {
+        labels: [{ name: 'kind:feature' }]
+      }
+    });
+    const listLabelsOnIssue = vi.fn().mockResolvedValue({
+      data: [{ name: 'kind:bug' }, { name: 'eval:pending' }]
+    });
+    const setLabels = vi.fn();
+    const context: GitHubContext = {
+      octokit: {
+        rest: {
+          issues: {
+            get,
+            listLabelsOnIssue,
+            setLabels
+          },
+          pulls: {}
+        }
+      } as unknown as GitHubRestClient,
+      repository: {
+        owner: 'evolvo-auto',
+        repo: 'core'
+      }
+    };
+
+    const result = await syncPullRequestLabelsFromIssue(
+      302,
+      42,
+      {
+        dryRun: true
+      },
+      context
+    );
+
+    expect(result.changed).toBe(true);
+    expect(result.dryRun).toBe(true);
+    expect(setLabels).not.toHaveBeenCalled();
+  });
+
+  it('returns unchanged when pull request already has mirrored labels', async () => {
+    const get = vi.fn().mockResolvedValue({
+      data: {
+        labels: [{ name: 'kind:feature' }, { name: 'surface:routing' }]
+      }
+    });
+    const listLabelsOnIssue = vi.fn().mockResolvedValue({
+      data: [
+        { name: 'kind:feature' },
+        { name: 'surface:routing' },
+        { name: 'eval:passed' }
+      ]
+    });
+    const setLabels = vi.fn();
+    const context: GitHubContext = {
+      octokit: {
+        rest: {
+          issues: {
+            get,
+            listLabelsOnIssue,
+            setLabels
+          },
+          pulls: {}
+        }
+      } as unknown as GitHubRestClient,
+      repository: {
+        owner: 'evolvo-auto',
+        repo: 'core'
+      }
+    };
+
+    const result = await syncPullRequestLabelsFromIssue(303, 43, {}, context);
+
+    expect(result.changed).toBe(false);
+    expect(result.nextPullRequestLabels).toEqual([
+      'kind:feature',
+      'surface:routing',
+      'eval:passed'
+    ]);
+    expect(setLabels).not.toHaveBeenCalled();
+  });
+
+  it('supports custom mirror prefixes and rejects empty prefix configurations', async () => {
+    const get = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: {
+          labels: [{ name: 'source:evolvo' }, { name: 'state:planned' }]
+        }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          labels: [{ name: 'source:evolvo' }]
+        }
+      });
+    const listLabelsOnIssue = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: [{ name: 'source:human' }, { name: 'eval:pending' }]
+      })
+      .mockResolvedValueOnce({
+        data: [{ name: 'source:human' }]
+      });
+    const setLabels = vi.fn().mockResolvedValue({
+      data: [{ name: 'eval:pending' }, { name: 'source:evolvo' }]
+    });
+    const context: GitHubContext = {
+      octokit: {
+        rest: {
+          issues: {
+            get,
+            listLabelsOnIssue,
+            setLabels
+          },
+          pulls: {}
+        }
+      } as unknown as GitHubRestClient,
+      repository: {
+        owner: 'evolvo-auto',
+        repo: 'core'
+      }
+    };
+
+    const customResult = await syncPullRequestLabelsFromIssue(
+      304,
+      44,
+      {
+        mirrorPrefixes: ['source:']
+      },
+      context
+    );
+
+    expect(customResult.changed).toBe(true);
+    expect(customResult.mirroredLabelNames).toEqual(['source:evolvo']);
+    expect(customResult.nextPullRequestLabels).toEqual([
+      'eval:pending',
+      'source:evolvo'
+    ]);
+    expect(setLabels).toHaveBeenCalledWith({
+      issue_number: 44,
+      labels: ['eval:pending', 'source:evolvo'],
+      owner: 'evolvo-auto',
+      repo: 'core'
+    });
+
+    await expect(
+      syncPullRequestLabelsFromIssue(
+        305,
+        45,
+        {
+          mirrorPrefixes: ['   ']
+        },
+        context
+      )
+    ).rejects.toThrow(
+      'At least one pull request label mirror prefix is required.'
+    );
   });
 });

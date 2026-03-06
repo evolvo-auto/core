@@ -284,3 +284,18 @@ export type UpsertPullRequestFromBranchResult = {
   pullRequest: GitHubPullRequest;
   pullRequestNumber: number;
 };
+
+export type SyncPullRequestLabelsOptions = {
+  dryRun?: boolean;
+  mirrorPrefixes?: string[];
+};
+
+export type SyncPullRequestLabelsResult = {
+  changed: boolean;
+  currentPullRequestLabels: string[];
+  dryRun: boolean;
+  issueNumber: number;
+  mirroredLabelNames: string[];
+  nextPullRequestLabels: string[];
+  pullRequestNumber: number;
+};
