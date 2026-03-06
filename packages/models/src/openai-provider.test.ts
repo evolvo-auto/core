@@ -48,7 +48,7 @@ describe('openai provider', () => {
 
     const result = await provider.invoke({
       maxTokens: 1200,
-      model: 'gpt-5.3-codex',
+      model: 'gpt-4o-mini',
       role: 'builder',
       systemPrompt: 'You are a strict code assistant.',
       temperature: 0.1,
@@ -75,7 +75,7 @@ describe('openai provider', () => {
       input: 'Return a short answer.',
       instructions: 'You are a strict code assistant.',
       max_output_tokens: 1200,
-      model: 'gpt-5.3-codex',
+      model: 'gpt-4o-mini',
       temperature: 0.1
     });
     expect(mockedCreateModelInvocation).toHaveBeenCalledWith(
@@ -140,6 +140,110 @@ describe('openai provider', () => {
         type: 'json_object'
       }
     });
+  });
+
+  it('omits temperature for gpt-5 family models', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          output: [
+            {
+              content: [
+                {
+                  text: 'Generated answer',
+                  type: 'output_text'
+                }
+              ],
+              role: 'assistant',
+              type: 'message'
+            }
+          ]
+        }),
+        {
+          status: 200
+        }
+      )
+    );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_2b' } as never);
+
+    const provider = createOpenAIProvider({
+      apiKey: 'openai-token',
+      baseUrl: 'https://api.openai.com/v1/',
+      fetchImplementation: fetchMock as unknown as typeof fetch
+    });
+
+    await expect(
+      provider.invoke({
+        model: 'gpt-5',
+        role: 'planner',
+        systemPrompt: 'Return JSON.',
+        temperature: 0.2,
+        userPrompt: 'Return a short answer.'
+      })
+    ).resolves.toMatchObject({
+      output: 'Generated answer',
+      provider: 'openai'
+    });
+
+    const payload = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+
+    expect(payload).toEqual({
+      input: 'Return a short answer.',
+      instructions: 'Return JSON.',
+      model: 'gpt-5'
+    });
+    expect(payload.temperature).toBeUndefined();
+  });
+
+  it('omits temperature for o-series models', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          output: [
+            {
+              content: [
+                {
+                  text: 'Reasoned answer',
+                  type: 'output_text'
+                }
+              ],
+              role: 'assistant',
+              type: 'message'
+            }
+          ]
+        }),
+        {
+          status: 200
+        }
+      )
+    );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_2c' } as never);
+
+    const provider = createOpenAIProvider({
+      apiKey: 'openai-token',
+      baseUrl: 'https://api.openai.com/v1/',
+      fetchImplementation: fetchMock as unknown as typeof fetch
+    });
+
+    await expect(
+      provider.invoke({
+        model: 'o3',
+        role: 'planner',
+        temperature: 0.2,
+        userPrompt: 'Return a short answer.'
+      })
+    ).resolves.toMatchObject({
+      output: 'Reasoned answer',
+      provider: 'openai'
+    });
+
+    const payload = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+
+    expect(payload).toEqual({
+      input: 'Return a short answer.',
+      model: 'o3'
+    });
+    expect(payload.temperature).toBeUndefined();
   });
 
   it('retries when the first request fails and later succeeds', async () => {

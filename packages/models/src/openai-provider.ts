@@ -72,6 +72,24 @@ function normalizeApiKey(apiKey: string): string {
   return normalizedApiKey;
 }
 
+function modelSupportsTemperature(model: string): boolean {
+  const normalizedModel = model.trim().toLowerCase();
+
+  if (!normalizedModel) {
+    return true;
+  }
+
+  if (
+    normalizedModel === 'gpt-5' ||
+    normalizedModel.startsWith('gpt-5-') ||
+    normalizedModel.startsWith('gpt-5.')
+  ) {
+    return false;
+  }
+
+  return !/^o\d/.test(normalizedModel);
+}
+
 function buildOpenAIRequestPayload(
   request: ProviderInvocationRequest
 ): OpenAIRequestPayload {
@@ -89,7 +107,8 @@ function buildOpenAIRequestPayload(
           }
         }
       : {}),
-    ...(request.temperature !== undefined
+    ...(request.temperature !== undefined &&
+    modelSupportsTemperature(request.model)
       ? { temperature: request.temperature }
       : {})
   };
