@@ -5,4 +5,5 @@ coverage
 dist
 .next
 .env
+packages/api/src/generated
 .DS_Store
