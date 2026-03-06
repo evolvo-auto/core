@@ -211,6 +211,10 @@ Support structured and freeform outputs through local models.
 
 ### P2-004 Create model routing resolver
 
+Status: done
+Branch: `feature/P2-004-create-model-routing-resolver`
+PR: `#24`
+
 Resolve role + capability to provider/model.
 
 ### P2-005 Add structured output validation and repair
