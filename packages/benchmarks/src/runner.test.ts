@@ -145,4 +145,63 @@ describe('runBenchmarkSuite', () => {
       })
     );
   });
+
+  it('includes explicitly required benchmarks even when default selection would skip them', async () => {
+    const createRun = vi.fn().mockImplementation(async (input) => ({
+      ...input,
+      id: `${input.benchmarkKey}-run`
+    }));
+
+    const result = await runBenchmarkSuite(
+      {
+        attemptId: 'att_3',
+        builderResult: {
+          filesActuallyChanged: ['genome/routing/model-routing.ts'],
+          summary: 'Adjusted routing policy.'
+        },
+        capabilityTags: ['typescript'],
+        cycleCompletedAt: new Date('2026-03-06T18:30:00.000Z'),
+        cycleStartedAt: new Date('2026-03-06T18:25:00.000Z'),
+        evaluationResult: {
+          checkResults: [],
+          evaluatorOutput: {
+            outcome: 'success',
+            regressionRisk: 'low',
+            summary: 'Mutation evaluation passed.'
+          },
+          observedFailures: []
+        },
+        issueNumber: 99,
+        repairAttempt: 0,
+        requiredBenchmarkKeys: ['routing-pack']
+      },
+      {
+        createRun,
+        listDefinitions: vi.fn().mockResolvedValue([
+          {
+            benchmarkKey: 'core-runtime-smoke',
+            benchmarkType: 'FIXED',
+            capabilityTags: [],
+            id: 'benchmark_1',
+            isActive: true,
+            version: 1
+          },
+          {
+            benchmarkKey: 'routing-pack',
+            benchmarkType: 'REGRESSION_PACK',
+            capabilityTags: ['routing'],
+            id: 'benchmark_2',
+            isActive: true,
+            version: 1
+          }
+        ]),
+        syncRegistry: vi.fn().mockResolvedValue([])
+      }
+    );
+
+    expect(result.selectedBenchmarkKeys).toEqual([
+      'core-runtime-smoke',
+      'routing-pack'
+    ]);
+  });
 });

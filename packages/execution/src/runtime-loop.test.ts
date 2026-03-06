@@ -32,6 +32,7 @@ describe('createRuntimeLoop', () => {
             title: 'Implement runtime loop'
           }
         ]),
+        listMutations: vi.fn().mockResolvedValue([]),
         selectIssue: vi.fn().mockResolvedValue({
           decisionType: 'select-issue',
           expectedLeverageScore: 80,
@@ -43,6 +44,7 @@ describe('createRuntimeLoop', () => {
           targetIssueNumber: 901,
           urgencyScore: 70
         }),
+        syncPromptDefinitions: vi.fn().mockResolvedValue([]),
         syncIssues: vi.fn().mockResolvedValue(undefined)
       }
     );
@@ -70,6 +72,8 @@ describe('createRuntimeLoop', () => {
       },
       {
         listFailures: vi.fn().mockResolvedValue([]),
+        listMutations: vi.fn().mockResolvedValue([]),
+        syncPromptDefinitions: vi.fn().mockResolvedValue([]),
         syncIssues: vi.fn().mockRejectedValue(new Error('GitHub unavailable'))
       }
     );
@@ -82,6 +86,60 @@ describe('createRuntimeLoop', () => {
         lastErrorMessage: 'GitHub unavailable',
         lastOutcome: 'failed',
         state: 'error'
+      })
+    );
+  });
+
+  it('maps selected mutations to their linked executable issues', async () => {
+    const executeIssue = vi.fn().mockResolvedValue({
+      issueNumber: 902,
+      outcome: 'completed'
+    });
+
+    const runtimeLoop = createRuntimeLoop(
+      {
+        intervalMs: 1000,
+        logging: {
+          verbosity: 'quiet'
+        }
+      },
+      {
+        executeIssue,
+        listFailures: vi.fn().mockResolvedValue([]),
+        listIssues: vi.fn().mockResolvedValue([]),
+        listMutations: vi.fn().mockResolvedValue([
+          {
+            id: 'mutation_902',
+            implementationPlan: 'Adjust selector heuristics.',
+            linkedIssueNumber: 902,
+            priorityScore: 88,
+            rationale: 'Repeated failures suggest a heuristic gap.',
+            state: 'PROPOSED',
+            targetSurface: 'ROUTING',
+            title: 'Improve selector routing heuristics'
+          }
+        ]),
+        selectIssue: vi.fn().mockResolvedValue({
+          decisionType: 'select-mutation',
+          expectedLeverageScore: 90,
+          nextStep: 'Execute the linked mutation issue.',
+          priorityScore: 91,
+          reason: 'This mutation has the highest systemic leverage.',
+          riskPenaltyScore: 18,
+          strategicValueScore: 92,
+          targetMutationId: 'mutation_902',
+          urgencyScore: 76
+        }),
+        syncPromptDefinitions: vi.fn().mockResolvedValue([]),
+        syncIssues: vi.fn().mockResolvedValue(undefined)
+      }
+    );
+
+    await runtimeLoop.runOnce();
+
+    expect(executeIssue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        issueNumber: 902
       })
     );
   });

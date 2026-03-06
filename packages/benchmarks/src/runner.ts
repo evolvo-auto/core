@@ -38,6 +38,7 @@ export type RunBenchmarkSuiteInput = {
   cycleStartedAt: Date;
   evaluationResult: BenchmarkEvaluationSummary;
   issueNumber: number;
+  requiredBenchmarkKeys?: string[];
   repairAttempt: number;
   runtimeVersionId?: string | null;
 };
@@ -199,17 +200,34 @@ export async function runBenchmarkSuite(
 
   await syncRegistry();
 
+  const activeDefinitions = await listDefinitions({
+    isActive: true,
+    limit: 200
+  });
   const selectedDefinitions = selectBenchmarkDefinitionsForAttempt({
-    benchmarkDefinitions: await listDefinitions({
-      isActive: true,
-      limit: 200
-    }),
+    benchmarkDefinitions: activeDefinitions,
     capabilityTags: input.capabilityTags,
     issueNumber: input.issueNumber
   });
+  const requiredDefinitions = activeDefinitions.filter((definition) =>
+    (input.requiredBenchmarkKeys ?? []).includes(definition.benchmarkKey)
+  );
+  const combinedDefinitions = [...selectedDefinitions];
+
+  for (const requiredDefinition of requiredDefinitions) {
+    if (
+      combinedDefinitions.some(
+        (definition) => definition.id === requiredDefinition.id
+      )
+    ) {
+      continue;
+    }
+
+    combinedDefinitions.push(requiredDefinition);
+  }
   const benchmarkRuns: BenchmarkRun[] = [];
 
-  for (const definition of selectedDefinitions) {
+  for (const definition of combinedDefinitions) {
     benchmarkRuns.push(await createRun(buildRunInput(definition, input)));
   }
 
@@ -222,7 +240,7 @@ export async function runBenchmarkSuite(
             0
           ) / benchmarkRuns.length,
     benchmarkRuns,
-    selectedBenchmarkKeys: selectedDefinitions.map(
+    selectedBenchmarkKeys: combinedDefinitions.map(
       (definition) => definition.benchmarkKey
     )
   };

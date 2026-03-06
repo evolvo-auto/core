@@ -6,8 +6,12 @@
   "exports": {
     "./failure-issue-draft": "./src/failure-issue-draft.ts",
     "./failure-reflection": "./src/failure-reflection.ts",
+    "./mutation-evaluation": "./src/mutation-evaluation.ts",
     "./mutation-issue-draft": "./src/mutation-issue-draft.ts",
-    "./mutation-proposal-generator": "./src/mutation-proposal-generator.ts"
+    "./mutation-proposal-generator": "./src/mutation-proposal-generator.ts",
+    "./prompt-lineage": "./src/prompt-lineage.ts",
+    "./prompt-registry": "./src/prompt-registry.ts",
+    "./routing-change-evidence": "./src/routing-change-evidence.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
@@ -17,9 +21,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@evolvo/api": "workspace:*",
+    "@evolvo/genome": "workspace:*",
     "@evolvo/orchestration": "workspace:*",
     "@evolvo/scoring": "workspace:*",
-    "@evolvo/schemas": "workspace:*"
+    "@evolvo/schemas": "workspace:*",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@evolvo/typescript-config": "workspace:*"

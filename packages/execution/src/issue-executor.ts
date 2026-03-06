@@ -1,5 +1,12 @@
 import { updateAttemptRecord } from '@evolvo/api/attempt-record';
 import { updateIssueRecord } from '@evolvo/api/issue-record';
+import {
+  createMutationOutcome
+} from '@evolvo/api/mutation-outcome';
+import {
+  listMutationProposals,
+  updateMutationProposal
+} from '@evolvo/api/mutation-proposal';
 import { runBenchmarkSuite, type RunBenchmarkSuiteResult } from '@evolvo/benchmarks/runner';
 import {
   findActiveWorktreeForIssue,
@@ -22,6 +29,16 @@ import {
   createLogger,
   type StructuredLogger
 } from '@evolvo/observability/logger';
+import {
+  evaluateMutation,
+  type MutationEvaluationSummary
+} from '@evolvo/mutation-engine/mutation-evaluation';
+import {
+  applyPromptLineage
+} from '@evolvo/mutation-engine/prompt-lineage';
+import {
+  buildRoutingChangeEvidence
+} from '@evolvo/mutation-engine/routing-change-evidence';
 import { runCriticRole } from '@evolvo/orchestration/critic-role';
 import { runPlannerRole } from '@evolvo/orchestration/planner-role';
 import type {
@@ -75,6 +92,9 @@ type IssueWorkflowState =
 
 type AttemptOutcome = 'BLOCKED' | 'FAILURE' | 'INCONCLUSIVE' | 'PARTIAL' | 'SUCCESS';
 type EvaluationStatus = 'FAILED' | 'PARTIAL' | 'PASSED' | 'PENDING' | 'REGRESSED';
+type PersistedMutationProposal = Awaited<
+  ReturnType<typeof listMutationProposals>
+>[number];
 
 export type ExecuteIssueAttemptInput = {
   baseRef?: string;
@@ -96,6 +116,8 @@ export type ExecuteIssueAttemptResult = {
 };
 
 export type ExecuteIssueAttemptDependencies = {
+  applyMutationPromptLineage?: typeof applyPromptLineage;
+  buildMutationRoutingChangeEvidence?: typeof buildRoutingChangeEvidence;
   cleanup?: typeof cleanupWorktree;
   createReserved?: typeof createReservedWorktree;
   findActiveWorktree?: typeof findActiveWorktreeForIssue;
@@ -105,19 +127,23 @@ export type ExecuteIssueAttemptDependencies = {
   planner?: typeof runPlannerRole;
   builder?: typeof runBuilderOrchestration;
   evaluationRunner?: typeof runEvaluation;
+  evaluateMutationSummary?: typeof evaluateMutation;
   runBenchmarks?: typeof runBenchmarkSuite;
   critic?: typeof runCriticRole;
   reserve?: typeof reserveWorktree;
   persistArtifacts?: typeof persistWorktreeArtifacts;
   processFailureMemory?: typeof processFailureFollowup;
+  createMutationEvaluationOutcome?: typeof createMutationOutcome;
   pushAndCommit?: typeof commitAndPushWorktree;
   reject?: typeof rejectIssue;
   defer?: typeof deferIssue;
+  listMutations?: typeof listMutationProposals;
   transitionState?: typeof transitionIssueState;
   syncIssueEvalLabel?: typeof syncIssueEvaluationLabel;
   syncPullRequestEvalLabel?: typeof syncPullRequestEvaluationLabel;
   syncPullRequestLabels?: typeof syncPullRequestLabelsFromIssue;
   upsertPullRequest?: typeof upsertPullRequestFromBranch;
+  updateMutation?: typeof updateMutationProposal;
   updateAttempt?: typeof updateAttemptRecord;
   updateIssue?: typeof updateIssueRecord;
   updateWorktree?: typeof updateWorktreeRecord;
@@ -256,7 +282,8 @@ function buildPullRequestBody(
   issueNumber: number,
   plannerOutput: PlannerOutput,
   builderResult: RunBuilderOrchestrationResult,
-  evaluationResult: RunEvaluationResult
+  evaluationResult: RunEvaluationResult,
+  additionalSections: string[] = []
 ): string {
   return [
     `## Summary`,
@@ -274,8 +301,147 @@ function buildPullRequestBody(
     `- Checks: ${evaluationResult.checkResults
       .map((checkResult) => `${checkResult.name}=${checkResult.result}`)
       .join(', ')}`,
+    ...additionalSections.flatMap((section) => ['', section]),
     '',
     `Closes #${String(issueNumber)}`
+  ].join('\n');
+}
+
+function extractBenchmarkIdsFromValidationPlan(validationPlan: unknown): string[] {
+  if (
+    typeof validationPlan !== 'object' ||
+    validationPlan === null ||
+    !Array.isArray((validationPlan as { benchmarkIds?: unknown }).benchmarkIds)
+  ) {
+    return [];
+  }
+
+  const benchmarkIds: string[] = [];
+  const seenBenchmarkIds = new Set<string>();
+
+  for (const benchmarkId of (validationPlan as { benchmarkIds: unknown[] })
+    .benchmarkIds) {
+    if (typeof benchmarkId !== 'string') {
+      continue;
+    }
+
+    const normalizedBenchmarkId = benchmarkId.trim();
+
+    if (!normalizedBenchmarkId || seenBenchmarkIds.has(normalizedBenchmarkId)) {
+      continue;
+    }
+
+    seenBenchmarkIds.add(normalizedBenchmarkId);
+    benchmarkIds.push(normalizedBenchmarkId);
+  }
+
+  return benchmarkIds;
+}
+
+function toSharedSurface(
+  surface: string
+): PlannerOutput['relevantSurfaces'][number] {
+  return surface.toLowerCase().replace(/_/g, '-') as PlannerOutput['relevantSurfaces'][number];
+}
+
+function isPromptMutation(
+  mutationProposal: PersistedMutationProposal | undefined,
+  builderResult: RunBuilderOrchestrationResult
+): boolean {
+  return (
+    mutationProposal?.targetSurface === 'PROMPTS' ||
+    builderResult.builderOutput.filesActuallyChanged.some((filePath) =>
+      filePath.startsWith('genome/prompts/')
+    )
+  );
+}
+
+function isRoutingMutation(
+  mutationProposal: PersistedMutationProposal | undefined,
+  builderResult: RunBuilderOrchestrationResult
+): boolean {
+  return (
+    mutationProposal?.targetSurface === 'ROUTING' ||
+    builderResult.builderOutput.filesActuallyChanged.includes(
+      'genome/routing/model-routing.ts'
+    )
+  );
+}
+
+function mapMutationDecisionToProposalState(
+  decision: MutationEvaluationSummary['adoptionDecision']
+): 'ADOPTED' | 'REJECTED' | 'VALIDATED' {
+  if (decision === 'adopt') {
+    return 'ADOPTED';
+  }
+
+  if (decision === 'reject') {
+    return 'REJECTED';
+  }
+
+  return 'VALIDATED';
+}
+
+function mapMutationDecisionToOutcomeState(
+  decision: MutationEvaluationSummary['adoptionDecision']
+): 'ADOPTED' | 'INCONCLUSIVE' | 'REJECTED' {
+  if (decision === 'adopt') {
+    return 'ADOPTED';
+  }
+
+  if (decision === 'reject') {
+    return 'REJECTED';
+  }
+
+  return 'INCONCLUSIVE';
+}
+
+function buildMutationEvaluationSection(
+  mutationProposal: PersistedMutationProposal,
+  mutationEvaluation: MutationEvaluationSummary,
+  promptLineageFiles: string[]
+): string {
+  return [
+    '## Mutation Evaluation',
+    '',
+    mutationProposal.rationale,
+    '',
+    `- Surface: ${toSharedSurface(mutationProposal.targetSurface)}`,
+    `- Adoption decision: ${mutationEvaluation.adoptionDecision}`,
+    `- Required benchmarks: ${
+      mutationEvaluation.benchmarkDelta.requiredBenchmarkKeys.join(', ') || 'none'
+    }`,
+    `- Executed benchmarks: ${
+      mutationEvaluation.benchmarkDelta.executedBenchmarkKeys.join(', ') || 'none'
+    }`,
+    `- Average current score: ${
+      mutationEvaluation.benchmarkDelta.averageCurrentScore === null
+        ? 'n/a'
+        : mutationEvaluation.benchmarkDelta.averageCurrentScore.toFixed(2)
+    }`,
+    `- Average baseline score: ${
+      mutationEvaluation.benchmarkDelta.averageBaselineScore === null
+        ? 'n/a'
+        : mutationEvaluation.benchmarkDelta.averageBaselineScore.toFixed(2)
+    }`,
+    `- Average score delta: ${
+      mutationEvaluation.benchmarkDelta.averageScoreDelta === null
+        ? 'n/a'
+        : mutationEvaluation.benchmarkDelta.averageScoreDelta.toFixed(2)
+    }`,
+    `- Benchmark evidence satisfied: ${
+      mutationEvaluation.benchmarkDelta.benchmarkEvidenceSatisfied ? 'yes' : 'no'
+    }`,
+    ...(mutationEvaluation.notes.length > 0
+      ? ['', '### Notes', ...mutationEvaluation.notes.map((note) => `- ${note}`)]
+      : []),
+    ...(promptLineageFiles.length > 0
+      ? [
+          '',
+          '### Prompt lineage',
+          ...promptLineageFiles.map((filePath) => `- ${filePath}`)
+        ]
+      : [])
   ].join('\n');
 }
 
@@ -436,9 +602,19 @@ export async function executeIssueAttempt(
   const hydrate = dependencies.hydrate ?? hydrateWorktree;
   const planner = dependencies.planner ?? runPlannerRole;
   const builder = dependencies.builder ?? runBuilderOrchestration;
+  const createMutationEvaluationOutcome =
+    dependencies.createMutationEvaluationOutcome ?? createMutationOutcome;
   const evaluationRunner = dependencies.evaluationRunner ?? runEvaluation;
+  const evaluateMutationSummary =
+    dependencies.evaluateMutationSummary ?? evaluateMutation;
+  const applyMutationPromptLineage =
+    dependencies.applyMutationPromptLineage ?? applyPromptLineage;
+  const buildMutationRoutingChangeEvidence =
+    dependencies.buildMutationRoutingChangeEvidence ??
+    buildRoutingChangeEvidence;
   const runBenchmarks = dependencies.runBenchmarks ?? runBenchmarkSuite;
   const critic = dependencies.critic ?? runCriticRole;
+  const listMutations = dependencies.listMutations ?? listMutationProposals;
   const reserve = dependencies.reserve ?? reserveWorktree;
   const persistArtifacts =
     dependencies.persistArtifacts ?? persistWorktreeArtifacts;
@@ -457,6 +633,7 @@ export async function executeIssueAttempt(
     dependencies.syncPullRequestLabels ?? syncPullRequestLabelsFromIssue;
   const upsertPullRequest =
     dependencies.upsertPullRequest ?? upsertPullRequestFromBranch;
+  const updateMutation = dependencies.updateMutation ?? updateMutationProposal;
   const updateAttempt = dependencies.updateAttempt ?? updateAttemptRecord;
   const updateIssue = dependencies.updateIssue ?? updateIssueRecord;
   const updateWorktree = dependencies.updateWorktree ?? updateWorktreeRecord;
@@ -464,11 +641,21 @@ export async function executeIssueAttempt(
   const env = process.env;
   const issue = await getGitHubIssue(input.issueNumber);
   const classification = classifyIssue(issue as never);
+  const mutationProposal =
+    classification.kind === 'MUTATION'
+      ? (
+          await listMutations({
+            limit: 1,
+            linkedIssueNumber: issue.number
+          })
+        )[0]
+      : undefined;
   logger.info({
     eventName: 'issue-executor.issue.loaded',
     message: 'Loaded issue and classification for execution.',
     data: {
       kind: classification.kind,
+      mutationProposalId: mutationProposal?.id,
       state: classification.state,
       ...(includeVerboseData
         ? {
@@ -556,6 +743,12 @@ export async function executeIssueAttempt(
   const selectedState = await transitionState(issue.number, 'SELECTED');
 
   await syncLocalIssueState(issue.number, selectedState, updateIssue, logger);
+  if (mutationProposal) {
+    await updateMutation({
+      id: mutationProposal.id,
+      state: 'SELECTED'
+    });
+  }
   await writeComment(issue.number, {
     commentKind: 'work-started',
     evidence: [
@@ -578,6 +771,12 @@ export async function executeIssueAttempt(
     updateIssue,
     logger
   );
+  if (mutationProposal) {
+    await updateMutation({
+      id: mutationProposal.id,
+      state: 'IN_PROGRESS'
+    });
+  }
   logger.info({
     eventName: 'issue-executor.execution.started',
     message: 'Issue moved into active execution.',
@@ -725,6 +924,7 @@ export async function executeIssueAttempt(
   let criticResult: CriticOutput | undefined;
   let failureReflection: FailureReflection | undefined;
   let artifactManifestPath: string | undefined;
+  let mutationEvaluation: MutationEvaluationSummary | undefined;
   const maxRepairAttempts = Math.max(0, input.maxRepairAttempts ?? 2);
   const capability = resolveCapability(classification.currentLabels, plannerOutput);
 
@@ -868,8 +1068,19 @@ export async function executeIssueAttempt(
         observedFailures: evaluationResult.observedFailures
       },
       issueNumber: issue.number,
+      requiredBenchmarkKeys: mutationProposal
+        ? extractBenchmarkIdsFromValidationPlan(mutationProposal.validationPlan)
+        : undefined,
       repairAttempt
     });
+    mutationEvaluation = mutationProposal
+      ? await evaluateMutationSummary({
+          attemptId: hydratedWorktree.attemptId,
+          benchmarkRuns: benchmarkResult.benchmarkRuns,
+          targetSurface: toSharedSurface(mutationProposal.targetSurface),
+          validationPlan: mutationProposal.validationPlan
+        })
+      : undefined;
 
     await syncIssueEvalLabel(
       issue.number,
@@ -909,6 +1120,44 @@ export async function executeIssueAttempt(
       evaluationResult.evaluatorOutput.shouldOpenPR &&
       builderResult.builderOutput.filesActuallyChanged.length > 0
     ) {
+      const promptLineageFiles =
+        mutationProposal && isPromptMutation(mutationProposal, builderResult)
+          ? await applyMutationPromptLineage({
+              changedFiles: builderResult.builderOutput.filesActuallyChanged,
+              lineageReason: mutationProposal.rationale,
+              mutationProposalId: mutationProposal.id,
+              worktreePath: reservedWorktree.filesystemPath
+            })
+          : [];
+
+      builderResult.builderOutput.filesActuallyChanged = [
+        ...new Set([
+          ...builderResult.builderOutput.filesActuallyChanged,
+          ...promptLineageFiles
+        ])
+      ];
+      const routingChangeEvidence =
+        mutationProposal &&
+        mutationEvaluation &&
+        isRoutingMutation(mutationProposal, builderResult)
+          ? await buildMutationRoutingChangeEvidence({
+              baseRef: input.baseRef,
+              evaluation: mutationEvaluation,
+              rationale: mutationProposal.rationale,
+              worktreePath: reservedWorktree.filesystemPath
+            })
+          : undefined;
+      const additionalPullRequestSections =
+        mutationProposal && mutationEvaluation
+          ? [
+              buildMutationEvaluationSection(
+                mutationProposal,
+                mutationEvaluation,
+                promptLineageFiles
+              ),
+              ...(routingChangeEvidence ? [routingChangeEvidence] : [])
+            ]
+          : [];
       const commitMessage = buildIssueCommitMessage(
         classification.kind.toLowerCase(),
         issue.number,
@@ -930,7 +1179,8 @@ export async function executeIssueAttempt(
           issue.number,
           plannerOutput,
           builderResult,
-          evaluationResult
+          evaluationResult,
+          additionalPullRequestSections
         ),
         branchName: reservedWorktree.branchName,
         title: `[Issue #${String(issue.number)}] ${issue.title}`
@@ -946,6 +1196,29 @@ export async function executeIssueAttempt(
         pullRequest.pullRequestNumber,
         mapEvaluationStatusToLabel(evaluationStatus)
       );
+      if (mutationProposal && mutationEvaluation) {
+        await createMutationEvaluationOutcome({
+          adoptedAt:
+            mutationEvaluation.adoptionDecision === 'adopt' ? new Date() : null,
+          benchmarkDelta: mutationEvaluation.benchmarkDelta,
+          mutationProposalId: mutationProposal.id,
+          notes: [
+            evaluationResult.evaluatorOutput.summary,
+            ...mutationEvaluation.notes
+          ]
+            .filter((line) => line.trim().length > 0)
+            .join('\n'),
+          outcome: mapMutationDecisionToOutcomeState(
+            mutationEvaluation.adoptionDecision
+          ) as never
+        });
+        await updateMutation({
+          id: mutationProposal.id,
+          state: mapMutationDecisionToProposalState(
+            mutationEvaluation.adoptionDecision
+          ) as never
+        });
+      }
 
       const doneState = await transitionState(issue.number, 'DONE');
 
@@ -1200,6 +1473,18 @@ export async function executeIssueAttempt(
       id: reservedWorktree.worktree.id,
       status: 'FAILED'
     });
+    if (mutationProposal) {
+      await createMutationEvaluationOutcome({
+        benchmarkDelta: mutationEvaluation?.benchmarkDelta ?? null,
+        mutationProposalId: mutationProposal.id,
+        notes: failureSummary,
+        outcome: 'REJECTED'
+      });
+      await updateMutation({
+        id: mutationProposal.id,
+        state: 'REJECTED'
+      });
+    }
     logger.warn({
       correlationIds: {
         attemptId: hydratedWorktree.attemptId,
