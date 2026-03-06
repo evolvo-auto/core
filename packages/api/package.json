@@ -5,11 +5,15 @@
   "type": "module",
   "exports": {
     "./attempt-record": "./src/attempt-record.ts",
+    "./capability-record": "./src/capability-record.ts",
     "./client": "./src/client.ts",
     "./database-url": "./src/database-url.ts",
+    "./failure-record": "./src/failure-record.ts",
     "./github-audit-event": "./src/github-audit-event.ts",
     "./issue-record": "./src/issue-record.ts",
     "./model-invocation": "./src/model-invocation.ts",
+    "./mutation-outcome": "./src/mutation-outcome.ts",
+    "./mutation-proposal": "./src/mutation-proposal.ts",
     "./worktree-record": "./src/worktree-record.ts"
   },
   "scripts": {

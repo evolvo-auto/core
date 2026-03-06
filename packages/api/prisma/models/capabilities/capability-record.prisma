@@ -1,0 +1,15 @@
+model CapabilityRecord {
+  id                    String   @id @default(cuid())
+  capabilityKey         String   @unique @map("capability_key")
+  confidenceScore       Int      @default(50) @map("confidence_score")
+  attempts              Int      @default(0)
+  successes             Int      @default(0)
+  failures              Int      @default(0)
+  recurringFailureModes Json?    @map("recurring_failure_modes")
+  lastIssueNumber       Int?     @map("last_issue_number")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([confidenceScore])
+  @@map("capabilities")
+}

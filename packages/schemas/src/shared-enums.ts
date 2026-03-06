@@ -19,6 +19,33 @@ export const issueKinds = [
 export const issueKindSchema = z.enum(issueKinds);
 export type IssueKind = z.infer<typeof issueKindSchema>;
 
+export const failurePhases = [
+  'planning',
+  'implementation',
+  'environment',
+  'evaluation',
+  'promotion',
+  'runtime'
+] as const;
+export const failurePhaseSchema = z.enum(failurePhases);
+export type FailurePhase = z.infer<typeof failurePhaseSchema>;
+
+export const failureCategories = [
+  'planning-failure',
+  'requirement-misunderstanding',
+  'code-generation-defect',
+  'environment-setup-failure',
+  'dependency-configuration-issue',
+  'runtime-failure',
+  'smoke-e2e-failure',
+  'evaluator-mismatch',
+  'model-quality-issue',
+  'mutation-regression',
+  'benchmark-integrity-issue'
+] as const;
+export const failureCategorySchema = z.enum(failureCategories);
+export type FailureCategory = z.infer<typeof failureCategorySchema>;
+
 export const outcomes = [
   'success',
   'partial',
@@ -45,3 +72,15 @@ export const surfaces = [
 ] as const;
 export const surfaceSchema = z.enum(surfaces);
 export type Surface = z.infer<typeof surfaceSchema>;
+
+export const mutationStates = [
+  'proposed',
+  'selected',
+  'in-progress',
+  'validated',
+  'adopted',
+  'rejected',
+  'reverted'
+] as const;
+export const mutationStateSchema = z.enum(mutationStates);
+export type MutationState = z.infer<typeof mutationStateSchema>;
