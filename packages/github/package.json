@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./audit-events": "./src/audit-events.ts",
     "./auth": "./src/auth.ts",
     "./comments": "./src/comments.ts",
     "./issue-classification": "./src/issue-classification.ts",

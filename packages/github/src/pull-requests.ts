@@ -1,3 +1,4 @@
+import { recordGitHubAuditEvent } from './audit-events.js';
 import { getGitHubContext } from './auth.js';
 import { getIssue } from './issues.js';
 import type {
@@ -193,6 +194,19 @@ export async function createPullRequest(
     maintainer_can_modify: input.maintainerCanModify,
     title: input.title
   });
+  await recordGitHubAuditEvent(
+    {
+      action: 'pull-request.created',
+      metadata: {
+        base: input.base,
+        draft: input.draft ?? false,
+        head: input.head,
+        title: input.title
+      },
+      pullRequestNumber: data.number
+    },
+    context
+  );
 
   return data;
 }
@@ -211,6 +225,18 @@ export async function updatePullRequest(
     state: input.state,
     title: input.title
   });
+  await recordGitHubAuditEvent(
+    {
+      action: 'pull-request.updated',
+      metadata: {
+        base: input.base ?? null,
+        state: input.state ?? null,
+        title: input.title ?? null
+      },
+      pullRequestNumber
+    },
+    context
+  );
 
   return data;
 }
@@ -347,6 +373,19 @@ export async function syncPullRequestLabelsFromIssue(
     await replacePullRequestLabels(
       pullRequestNumber,
       nextPullRequestLabels,
+      context
+    );
+    await recordGitHubAuditEvent(
+      {
+        action: 'pull-request.labels-synced',
+        issueNumber,
+        metadata: {
+          mirrorPrefixes,
+          mirroredLabelNames,
+          nextPullRequestLabels
+        },
+        pullRequestNumber
+      },
       context
     );
   }

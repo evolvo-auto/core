@@ -6,6 +6,7 @@
   "exports": {
     "./client": "./src/client.ts",
     "./database-url": "./src/database-url.ts",
+    "./github-audit-event": "./src/github-audit-event.ts",
     "./issue-record": "./src/issue-record.ts"
   },
   "scripts": {

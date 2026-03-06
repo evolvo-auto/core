@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { recordGitHubAuditEvent } from './audit-events.js';
 import { createIssueComment } from './comments.js';
 import {
   buildStructuredIssueComment,
@@ -7,10 +8,15 @@ import {
 } from './issue-comment-writer.js';
 import type { GitHubContext, GitHubIssueComment } from './types.js';
 
+vi.mock('./audit-events.js', () => ({
+  recordGitHubAuditEvent: vi.fn()
+}));
+
 vi.mock('./comments.js', () => ({
   createIssueComment: vi.fn()
 }));
 
+const mockedRecordGitHubAuditEvent = vi.mocked(recordGitHubAuditEvent);
 const mockedCreateIssueComment = vi.mocked(createIssueComment);
 
 describe('issue comment writer', () => {
@@ -103,6 +109,17 @@ Work has started on this issue.
 
 **Next step**
 Proceed with implementation and post progress updates.`
+      },
+      context
+    );
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledWith(
+      {
+        action: 'issue-comment.created',
+        issueNumber: 88,
+        metadata: {
+          commentId: 501,
+          commentKind: 'work-started'
+        }
       },
       context
     );

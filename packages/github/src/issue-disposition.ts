@@ -1,3 +1,4 @@
+import { recordGitHubAuditEvent } from './audit-events.js';
 import { getGitHubContext } from './auth.js';
 import {
   buildStructuredIssueComment,
@@ -76,6 +77,18 @@ async function performIssueDisposition(
   const commentResult = await writeStructuredIssueComment(
     issueNumber,
     commentInput,
+    context
+  );
+  await recordGitHubAuditEvent(
+    {
+      action: action === 'defer' ? 'issue.defer' : 'issue.reject',
+      issueNumber,
+      metadata: {
+        commentId: commentResult.comment.id,
+        stateChanged: stateTransition.changed,
+        targetState
+      }
+    },
     context
   );
 

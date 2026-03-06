@@ -1,3 +1,4 @@
+import { recordGitHubAuditEvent } from './audit-events.js';
 import { getGitHubContext } from './auth.js';
 import { getIssue, replaceIssueLabels } from './issues.js';
 import type {
@@ -208,6 +209,20 @@ export async function transitionIssueState(
 
   if (!options.dryRun && changed) {
     await replaceIssueLabels(issueNumber, nextLabels, context);
+    await recordGitHubAuditEvent(
+      {
+        action: 'issue-state.transitioned',
+        issueNumber,
+        metadata: {
+          currentState: currentState ?? null,
+          currentStateLabels,
+          nextLabels,
+          nextState: targetState,
+          nextStateLabel
+        }
+      },
+      context
+    );
   }
 
   return {

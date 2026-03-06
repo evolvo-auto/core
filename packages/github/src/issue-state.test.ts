@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { recordGitHubAuditEvent } from './audit-events.js';
 import {
   buildIssueStateTransitionLabels,
   extractIssueStateLabelNames,
@@ -14,7 +15,17 @@ import type {
   GitHubRestClient
 } from './types.js';
 
+vi.mock('./audit-events.js', () => ({
+  recordGitHubAuditEvent: vi.fn()
+}));
+
+const mockedRecordGitHubAuditEvent = vi.mocked(recordGitHubAuditEvent);
+
 describe('issue state helpers', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('maps workflow states to canonical state labels', () => {
     expect(getIssueStateLabelName('TRIAGE')).toBe('state:triage');
     expect(getIssueStateLabelName('IN_PROGRESS')).toBe('state:in-progress');
@@ -85,6 +96,20 @@ describe('issue state helpers', () => {
       owner: 'evolvo-auto',
       repo: 'core'
     });
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledWith(
+      {
+        action: 'issue-state.transitioned',
+        issueNumber: 42,
+        metadata: {
+          currentState: 'PLANNED',
+          currentStateLabels: ['state:planned'],
+          nextLabels: ['kind:feature', 'state:in-progress'],
+          nextState: 'IN_PROGRESS',
+          nextStateLabel: 'state:in-progress'
+        }
+      },
+      context
+    );
   });
 
   it('returns unchanged when issue is already in target state', async () => {
@@ -114,6 +139,7 @@ describe('issue state helpers', () => {
     expect(result.changed).toBe(false);
     expect(result.nextLabels).toEqual(['kind:feature', 'state:planned']);
     expect(setLabels).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 
   it('supports dry-run transitions without writing labels', async () => {
@@ -150,6 +176,7 @@ describe('issue state helpers', () => {
     expect(result.changed).toBe(true);
     expect(result.dryRun).toBe(true);
     expect(setLabels).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 
   it('blocks transitions when expected current state does not match', async () => {
@@ -187,6 +214,7 @@ describe('issue state helpers', () => {
       'Refusing state transition for issue #45: expected current state SELECTED, received PLANNED'
     );
     expect(setLabels).not.toHaveBeenCalled();
+    expect(mockedRecordGitHubAuditEvent).not.toHaveBeenCalled();
   });
 
   it('supports transitioning an issue object directly', async () => {
@@ -218,5 +246,6 @@ describe('issue state helpers', () => {
     expect(result.issueNumber).toBe(46);
     expect(result.nextState).toBe('DONE');
     expect(setLabels).toHaveBeenCalledTimes(1);
+    expect(mockedRecordGitHubAuditEvent).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,3 +1,4 @@
+import type { CreateGitHubAuditEventInput } from '@evolvo/api/github-audit-event';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 import type { Octokit } from 'octokit';
 
@@ -320,4 +321,28 @@ export type SyncPullRequestLabelsResult = {
   mirroredLabelNames: string[];
   nextPullRequestLabels: string[];
   pullRequestNumber: number;
+};
+
+export type GitHubAuditEventAction =
+  | 'issue-comment.created'
+  | 'issue-state.transitioned'
+  | 'issue.defer'
+  | 'issue.reject'
+  | 'pull-request.created'
+  | 'pull-request.updated'
+  | 'pull-request.labels-synced';
+
+export type RecordGitHubAuditEventInput = {
+  action: GitHubAuditEventAction;
+  issueNumber?: number;
+  metadata?: CreateGitHubAuditEventInput['metadataJson'];
+  pullRequestNumber?: number;
+};
+
+export type RecordGitHubAuditEventResult = {
+  action: GitHubAuditEventAction;
+  errorMessage?: string;
+  issueNumber?: number;
+  persisted: boolean;
+  pullRequestNumber?: number;
 };

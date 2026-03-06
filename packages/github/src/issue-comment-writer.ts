@@ -1,3 +1,4 @@
+import { recordGitHubAuditEvent } from './audit-events.js';
 import { getGitHubContext } from './auth.js';
 import { createIssueComment } from './comments.js';
 import type {
@@ -118,6 +119,17 @@ export async function writeStructuredIssueComment(
     issueNumber,
     {
       body
+    },
+    context
+  );
+  await recordGitHubAuditEvent(
+    {
+      action: 'issue-comment.created',
+      issueNumber,
+      metadata: {
+        commentId: comment.id,
+        commentKind: input.commentKind
+      }
     },
     context
   );
