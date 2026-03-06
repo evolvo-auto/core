@@ -21,6 +21,10 @@ Create `apps/`, `packages/`, `genome/`, `infra/`, and base TypeScript config.
 
 ### P0-002 Set up package manager and workspace config
 
+Status: done
+Branch: `feature/P0-002-set-up-package-manager-and-workspace-config`
+PR: `#2`
+
 Configure pnpm workspace, root scripts, linting, formatting, and base build.
 
 ### P0-003 Add Docker Compose for Postgres and local services

@@ -1,0 +1,19 @@
+{
+  "name": "@evolvo/vitest-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.mjs"
+  },
+  "scripts": {
+    "build": "node --eval \"\"",
+    "clean": "git clean -fdX .",
+    "lint": "eslint . --max-warnings 0 --no-error-on-unmatched-pattern",
+    "test": "vitest run --passWithNoTests --root . --config ../../vitest.config.mjs",
+    "typecheck": "node --eval \"\""
+  },
+  "dependencies": {
+    "vitest": "^3.2.4"
+  }
+}

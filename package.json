@@ -1,0 +1,30 @@
+{
+  "name": "evolvo",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.28.1",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.28.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "clean": "turbo run clean",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "@evolvo/eslint-config": "workspace:*",
+    "@evolvo/typescript-config": "workspace:*",
+    "@evolvo/vitest-config": "workspace:*",
+    "@types/node": "^24.5.2",
+    "eslint": "^9.35.0",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.8",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
