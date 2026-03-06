@@ -5,10 +5,13 @@ import {
   QueryClient
 } from '@tanstack/react-query';
 import { platformHealthQueryKey } from '@evolvo/query/health';
+import { worktreeSnapshotQueryKey } from '@evolvo/query/worktrees';
 import type { PlatformHealthSnapshot } from '@evolvo/schemas/health-schemas';
 
 import PlatformHealthBoard from './components/platform-health-board';
+import WorktreeBoard from './components/worktree-board';
 import { buildPlatformHealthSnapshot } from './lib/build-platform-health-snapshot';
+import { buildWorktreeSnapshot } from './lib/build-worktree-snapshot';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +46,10 @@ export default async function DashboardPage() {
   await queryClient.prefetchQuery({
     queryFn: () => buildPlatformHealthSnapshot(),
     queryKey: platformHealthQueryKey
+  });
+  await queryClient.prefetchQuery({
+    queryFn: () => buildWorktreeSnapshot(),
+    queryKey: worktreeSnapshotQueryKey
   });
 
   const snapshot = queryClient.getQueryData<PlatformHealthSnapshot>(
@@ -128,6 +135,9 @@ export default async function DashboardPage() {
 
       <HydrationBoundary state={dehydrate(queryClient)}>
         <PlatformHealthBoard />
+      </HydrationBoundary>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <WorktreeBoard />
       </HydrationBoundary>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)]">

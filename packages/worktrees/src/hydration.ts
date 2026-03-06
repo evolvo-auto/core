@@ -2,11 +2,17 @@ import { access, mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { arch, platform } from 'node:process';
 
+import { createAttemptRecord } from '@evolvo/api/attempt-record';
 import {
   getWorktreeRecordById,
   updateWorktreeRecord
 } from '@evolvo/api/worktree-record';
 
+import {
+  appendAttemptJournalNote,
+  appendAttemptJournalStatusTransition,
+  initializeAttemptJournal
+} from './attempt-journal.js';
 import { runCommand, type CommandExecutionResult } from './command-runner.js';
 
 const requiredRepositoryEntries = ['package.json', 'pnpm-workspace.yaml', 'turbo.json'];
@@ -21,6 +27,7 @@ export type HydrateWorktreeInput = {
 };
 
 export type HydrateWorktreeResult = {
+  attemptId: string;
   attemptJournalPath: string;
   environmentFingerprintPath: string;
   installPerformed: boolean;
@@ -28,7 +35,11 @@ export type HydrateWorktreeResult = {
 };
 
 export type HydrateWorktreeDependencies = {
+  appendJournalNote?: typeof appendAttemptJournalNote;
+  appendJournalStatusTransition?: typeof appendAttemptJournalStatusTransition;
+  createAttempt?: typeof createAttemptRecord;
   getRecordById?: typeof getWorktreeRecordById;
+  initializeJournal?: typeof initializeAttemptJournal;
   pathExists?: (path: string) => Promise<boolean>;
   runToolCommand?: (input: {
     args: string[];
@@ -120,7 +131,13 @@ export async function hydrateWorktree(
   input: HydrateWorktreeInput,
   dependencies: HydrateWorktreeDependencies = {}
 ): Promise<HydrateWorktreeResult> {
+  const appendJournalNote = dependencies.appendJournalNote ?? appendAttemptJournalNote;
+  const appendJournalStatusTransition =
+    dependencies.appendJournalStatusTransition ??
+    appendAttemptJournalStatusTransition;
+  const createAttempt = dependencies.createAttempt ?? createAttemptRecord;
   const getRecordById = dependencies.getRecordById ?? getWorktreeRecordById;
+  const initializeJournal = dependencies.initializeJournal ?? initializeAttemptJournal;
   const updateRecord = dependencies.updateRecord ?? updateWorktreeRecord;
   const pathExists = dependencies.pathExists ?? defaultPathExists;
   const runToolCommand =
@@ -173,6 +190,12 @@ export async function hydrateWorktree(
       readToolVersion('pnpm', filesystemPath, runToolCommand),
       readToolVersion('git', filesystemPath, runToolCommand)
     ]);
+    const attemptRecord = await createAttempt({
+      evaluationStatus: 'PENDING',
+      issueNumber: record.issueNumber,
+      summary: 'Hydration started.',
+      worktreeId: record.id
+    });
 
     let installPerformed = false;
 
@@ -191,47 +214,51 @@ export async function hydrateWorktree(
       recursive: true
     });
 
-    const createdAt = new Date().toISOString();
-    const attemptJournal = {
+    const capturedAt = new Date();
+    const capturedAtIso = capturedAt.toISOString();
+    await initializeJournal({
+      attemptId: attemptRecord.id,
       branchName: record.branchName,
-      createdAt,
+      createdAt: capturedAt,
+      initialStatus: 'HYDRATING',
+      initialStatusNote: 'Hydration started.',
       issueNumber: record.issueNumber,
-      stage: 'hydrating',
-      steps: [
-        {
-          name: 'verify-repo-shape',
-          status: 'passed'
-        },
-        {
-          name: 'confirm-required-tools',
-          status: 'passed'
-        },
-        {
-          name: installPerformed
-            ? 'install-dependencies'
-            : 'install-dependencies-skipped',
-          status: 'passed'
-        }
-      ],
+      journalPath: attemptJournalPath,
       worktreeId: record.id
-    };
+    });
+    await appendJournalNote({
+      journalPath: attemptJournalPath,
+      message: 'Repository shape validated.',
+      source: 'hydration'
+    });
+    await appendJournalNote({
+      journalPath: attemptJournalPath,
+      message: `Tooling detected (node=${nodeVersion}, pnpm=${pnpmVersion}, git=${gitVersion}).`,
+      source: 'hydration'
+    });
+    await appendJournalNote({
+      journalPath: attemptJournalPath,
+      message: installPerformed
+        ? 'Dependencies installed during hydration.'
+        : 'Dependency installation skipped; node_modules already present.',
+      source: 'hydration'
+    });
+
     const environmentFingerprint = {
       arch,
       baseRef: record.baseRef,
       branchName: record.branchName,
-      capturedAt: createdAt,
+      capturedAt: capturedAtIso,
       filesystemPath,
       gitVersion,
       issueNumber: record.issueNumber,
       nodeVersion,
       platform,
       pnpmVersion,
+      worktreeAttemptId: attemptRecord.id,
       worktreeId: record.id
     };
 
-    await writeFile(`${attemptJournalPath}`, `${JSON.stringify(attemptJournal, null, 2)}\n`, {
-      encoding: 'utf-8'
-    });
     await writeFile(
       `${environmentFingerprintPath}`,
       `${JSON.stringify(environmentFingerprint, null, 2)}\n`,
@@ -244,8 +271,15 @@ export async function hydrateWorktree(
       id: record.id,
       status: 'ACTIVE'
     });
+    await appendJournalStatusTransition({
+      fromStatus: 'HYDRATING',
+      journalPath: attemptJournalPath,
+      note: 'Hydration completed successfully.',
+      toStatus: 'ACTIVE'
+    });
 
     return {
+      attemptId: attemptRecord.id,
       attemptJournalPath,
       environmentFingerprintPath,
       installPerformed,

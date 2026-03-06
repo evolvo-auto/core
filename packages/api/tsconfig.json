@@ -1,5 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "@evolvo/typescript-config/library.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true
+  },
   "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

@@ -5,19 +5,20 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@tanstack/react-query', () => ({
   HydrationBoundary: ({ children }: { children: React.ReactNode }) => children,
   QueryClient: class {
-    #data: unknown;
+    #dataByKey = new Map<string, unknown>();
 
     async prefetchQuery({
-      queryFn
+      queryFn,
+      queryKey
     }: {
       queryFn: () => Promise<unknown>;
       queryKey: readonly unknown[];
     }) {
-      this.#data = await queryFn();
+      this.#dataByKey.set(JSON.stringify(queryKey), await queryFn());
     }
 
-    getQueryData<T>() {
-      return this.#data as T;
+    getQueryData<T>(queryKey: readonly unknown[]) {
+      return this.#dataByKey.get(JSON.stringify(queryKey)) as T;
     }
   },
   dehydrate: () => ({})
@@ -25,6 +26,10 @@ vi.mock('@tanstack/react-query', () => ({
 
 vi.mock('./components/platform-health-board', () => ({
   default: () => <section>Platform health board</section>
+}));
+
+vi.mock('./components/worktree-board', () => ({
+  default: () => <section>Worktree board</section>
 }));
 
 vi.mock('./lib/build-platform-health-snapshot', () => ({
@@ -84,6 +89,40 @@ vi.mock('./lib/build-platform-health-snapshot', () => ({
   })
 }));
 
+vi.mock('./lib/build-worktree-snapshot', () => ({
+  buildWorktreeSnapshot: vi.fn().mockResolvedValue({
+    generatedAt: '2026-03-06T12:00:00.000Z',
+    summary: {
+      active: 1,
+      completed: 1,
+      failed: 0,
+      total: 2
+    },
+    worktrees: [
+      {
+        attemptCount: 1,
+        branchName: 'issue/930-add-worktree-board',
+        bucket: 'active',
+        issueNumber: 930,
+        linkedPullRequestNumber: null,
+        status: 'ACTIVE',
+        updatedAt: '2026-03-06T12:00:00.000Z',
+        worktreeId: 'wt_930'
+      },
+      {
+        attemptCount: 2,
+        branchName: 'issue/931-cleanup-complete',
+        bucket: 'completed',
+        issueNumber: 931,
+        linkedPullRequestNumber: 88,
+        status: 'COMPLETED',
+        updatedAt: '2026-03-06T11:59:00.000Z',
+        worktreeId: 'wt_931'
+      }
+    ]
+  })
+}));
+
 import DashboardPage from './page';
 
 describe('DashboardPage', () => {
@@ -95,6 +134,7 @@ describe('DashboardPage', () => {
     );
     expect(markup).toContain('Authoritative health probes');
     expect(markup).toContain('Platform health board');
+    expect(markup).toContain('Worktree board');
     expect(markup).not.toContain('style=');
   });
 

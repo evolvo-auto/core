@@ -1,7 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 
-import { PrismaClient } from './generated/prisma/client.js';
-import { getDatabaseUrl } from './database-url.js';
+import { PrismaClient } from './generated/prisma/client.ts';
+import { getDatabaseUrl } from './database-url.ts';
 
 let prismaClient: PrismaClient | undefined;
 

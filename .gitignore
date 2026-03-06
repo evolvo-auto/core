@@ -5,6 +5,7 @@ coverage
 dist
 .next
 .next-docs
+.artifacts
 .env
 *.tsbuildinfo
 packages/api/src/generated

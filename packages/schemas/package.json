@@ -6,7 +6,8 @@
   "exports": {
     "./health-schemas": "./src/health-schemas.ts",
     "./role-output-schemas": "./src/role-output-schemas.ts",
-    "./shared-enums": "./src/shared-enums.ts"
+    "./shared-enums": "./src/shared-enums.ts",
+    "./worktree-schemas": "./src/worktree-schemas.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
