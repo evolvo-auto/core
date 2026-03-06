@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./client": "./src/client.ts",
-    "./database-url": "./src/database-url.ts"
+    "./database-url": "./src/database-url.ts",
+    "./issue-record": "./src/issue-record.ts"
   },
   "scripts": {
     "build": "pnpm --dir ../.. db:generate && tsc --noEmit -p tsconfig.json",
