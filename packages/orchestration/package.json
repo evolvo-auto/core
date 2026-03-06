@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./builder-role": "./src/builder-role.ts",
     "./critic-role": "./src/critic-role.ts",
+    "./evaluator-interpreter-role": "./src/evaluator-interpreter-role.ts",
     "./mutator-role": "./src/mutator-role.ts",
     "./narrator-role": "./src/narrator-role.ts",
     "./planner-role": "./src/planner-role.ts",

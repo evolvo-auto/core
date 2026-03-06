@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  getIssueRecordByGitHubIssueNumber,
   listIssueRecords,
+  updateIssueRecord,
   upsertIssueRecord,
   upsertIssueRecords
 } from './issue-record.js';
@@ -37,6 +39,7 @@ describe('issue record DAL', () => {
     expect(payload.where).toEqual({
       githubIssueNumber: 11
     });
+    expect(payload.create.currentLabels).toEqual(['state:triage', 'kind:idea']);
     expect(payload.create.priorityScore).toBeNull();
     expect(payload.create.riskLevel).toBeNull();
     expect(payload.update.priorityScore).toBeNull();
@@ -81,7 +84,54 @@ describe('issue record DAL', () => {
     expect(upsert).toHaveBeenCalledTimes(2);
   });
 
-  it('lists cached issues ordered by issue number', async () => {
+  it('updates a cached issue record and rejects empty updates', async () => {
+    const update = vi.fn().mockResolvedValue({
+      githubIssueNumber: 22
+    });
+    const prisma = {
+      issueRecord: {
+        update
+      }
+    } as unknown as PrismaClient;
+
+    await updateIssueRecord(
+      {
+        currentLabels: [' state:selected ', 'eval:pending', 'state:selected'],
+        githubIssueNumber: 22,
+        linkedBranch: ' issue/22-builder-loop ',
+        linkedWorktreeId: ' wt_22 ',
+        priorityScore: 88,
+        state: 'IN_PROGRESS',
+        title: ' Implement builder loop '
+      },
+      prisma
+    );
+
+    expect(update).toHaveBeenCalledWith({
+      data: {
+        currentLabels: ['state:selected', 'eval:pending'],
+        linkedBranch: 'issue/22-builder-loop',
+        linkedWorktreeId: 'wt_22',
+        priorityScore: 88,
+        state: 'IN_PROGRESS',
+        title: 'Implement builder loop'
+      },
+      where: {
+        githubIssueNumber: 22
+      }
+    });
+
+    await expect(
+      updateIssueRecord(
+        {
+          githubIssueNumber: 22
+        },
+        prisma
+      )
+    ).rejects.toThrow('Issue record update requires at least one mutable field.');
+  });
+
+  it('lists cached issues ordered by issue number with optional filters', async () => {
     const findMany = vi.fn().mockResolvedValue([
       {
         githubIssueNumber: 1
@@ -93,7 +143,13 @@ describe('issue record DAL', () => {
       }
     } as unknown as PrismaClient;
 
-    const issues = await listIssueRecords(prisma);
+    const issues = await listIssueRecords(
+      {
+        limit: 5.8,
+        states: ['TRIAGE', 'PLANNED']
+      },
+      prisma
+    );
 
     expect(issues).toEqual([
       {
@@ -103,6 +159,37 @@ describe('issue record DAL', () => {
     expect(findMany).toHaveBeenCalledWith({
       orderBy: {
         githubIssueNumber: 'asc'
+      },
+      take: 5,
+      where: {
+        kind: undefined,
+        source: undefined,
+        state: {
+          in: ['TRIAGE', 'PLANNED']
+        }
+      }
+    });
+  });
+
+  it('fetches a single cached issue by GitHub issue number', async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      githubIssueNumber: 30
+    });
+    const prisma = {
+      issueRecord: {
+        findUnique
+      }
+    } as unknown as PrismaClient;
+
+    await expect(
+      getIssueRecordByGitHubIssueNumber(30, prisma)
+    ).resolves.toEqual({
+      githubIssueNumber: 30
+    });
+
+    expect(findUnique).toHaveBeenCalledWith({
+      where: {
+        githubIssueNumber: 30
       }
     });
   });

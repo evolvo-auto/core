@@ -7,6 +7,7 @@
     "./audit-events": "./src/audit-events.ts",
     "./auth": "./src/auth.ts",
     "./comments": "./src/comments.ts",
+    "./evaluation-labels": "./src/evaluation-labels.ts",
     "./issue-classification": "./src/issue-classification.ts",
     "./issue-comment-writer": "./src/issue-comment-writer.ts",
     "./issue-disposition": "./src/issue-disposition.ts",
