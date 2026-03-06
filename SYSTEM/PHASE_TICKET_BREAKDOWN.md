@@ -367,6 +367,9 @@ Map setup failures back into structured issue comments.
 Goal:
 Evolvo can actually do engineering work end to end.
 
+Phase 4 activation gate:
+once this phase is complete (including P4-011), the runtime should be able to run continuously, read issues from GitHub, and attempt implementation without manual step-by-step triggering.
+
 ### P4-001 Implement builder orchestration
 
 Take a plan and generate coding steps.
@@ -406,6 +409,11 @@ Apply `eval:*` labels after evaluation.
 ### P4-010 Record attempt outcomes and evaluation results
 
 Persist structured outcomes.
+
+### P4-011 Implement autonomous runtime issue loop
+
+Run the runtime as a long-lived loop that:
+syncs issues, selects work, reserves/uses worktrees, executes builder+evaluator flow, writes issue/PR updates, then repeats on a schedule with retry/backoff.
 
 ---
 
