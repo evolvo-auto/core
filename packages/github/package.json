@@ -7,6 +7,7 @@
     "./auth": "./src/auth.ts",
     "./comments": "./src/comments.ts",
     "./issue-classification": "./src/issue-classification.ts",
+    "./issue-state": "./src/issue-state.ts",
     "./issue-sync": "./src/issue-sync.ts",
     "./issues": "./src/issues.ts",
     "./label-taxonomy": "./src/label-taxonomy.ts",

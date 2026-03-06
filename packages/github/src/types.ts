@@ -61,6 +61,18 @@ export type GitHubIssueWorkflowState =
   | 'REJECTED'
   | 'DEFERRED';
 
+export type IssueStateLabelName =
+  | 'state:triage'
+  | 'state:planned'
+  | 'state:selected'
+  | 'state:in-progress'
+  | 'state:awaiting-eval'
+  | 'state:awaiting-promotion'
+  | 'state:blocked'
+  | 'state:done'
+  | 'state:rejected'
+  | 'state:deferred';
+
 export type GitHubIssueKind =
   | 'IDEA'
   | 'CHALLENGE'
@@ -101,6 +113,23 @@ export type GitHubIssueClassification = {
   state: GitHubIssueWorkflowState;
   surfaces: GitHubIssueSurface[];
   title: string;
+};
+
+export type TransitionIssueStateOptions = {
+  dryRun?: boolean;
+  expectedCurrentState?: GitHubIssueWorkflowState;
+};
+
+export type TransitionIssueStateResult = {
+  changed: boolean;
+  currentLabels: string[];
+  currentState?: GitHubIssueWorkflowState;
+  currentStateLabels: IssueStateLabelName[];
+  dryRun: boolean;
+  issueNumber: number;
+  nextLabels: string[];
+  nextState: GitHubIssueWorkflowState;
+  nextStateLabel: IssueStateLabelName;
 };
 
 export type GitHubLabelGroup =
