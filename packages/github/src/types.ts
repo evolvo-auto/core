@@ -49,6 +49,46 @@ export type GitHubPullRequest =
 export type GitHubPullRequestListItem =
   RestEndpointMethodTypes['pulls']['list']['response']['data'][number];
 
+export type GitHubLabelGroup =
+  | 'source'
+  | 'kind'
+  | 'state'
+  | 'risk'
+  | 'surface'
+  | 'capability'
+  | 'human-policy'
+  | 'evaluation'
+  | 'priority';
+
+export type GitHubLabelDefinition = {
+  color: string;
+  description: string;
+  group: GitHubLabelGroup;
+  name: string;
+};
+
+export type GitHubLabelSyncAction = 'create' | 'update' | 'unchanged';
+
+export type GitHubLabelSyncChange = {
+  action: GitHubLabelSyncAction;
+  currentColor?: string;
+  currentDescription?: string;
+  group: GitHubLabelGroup;
+  name: string;
+  nextColor: string;
+  nextDescription: string;
+};
+
+export type GitHubLabelSyncResult = {
+  created: GitHubLabelSyncChange[];
+  dryRun: boolean;
+  extraLabels: Pick<GitHubLabel, 'color' | 'description' | 'name'>[];
+  totalExisting: number;
+  totalManaged: number;
+  unchanged: GitHubLabelSyncChange[];
+  updated: GitHubLabelSyncChange[];
+};
+
 export type ListRepositoryCommentsOptions = {
   direction?: ListCommentsParameters['direction'];
   page?: ListCommentsParameters['page'];
@@ -92,6 +132,11 @@ export type UpdateRepositoryLabelInput = {
   color?: UpdateLabelParameters['color'];
   description?: UpdateLabelParameters['description'];
   newName?: UpdateLabelParameters['new_name'];
+};
+
+export type SyncRepositoryLabelsOptions = {
+  definitions?: readonly GitHubLabelDefinition[];
+  dryRun?: boolean;
 };
 
 export type CreateIssueCommentInput = {

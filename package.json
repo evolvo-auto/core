@@ -19,6 +19,8 @@
     "db:validate": "prisma validate --config prisma.config.ts",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
+    "github:labels:plan": "pnpm --filter @evolvo/github labels:plan",
+    "github:labels:sync": "pnpm --filter @evolvo/github labels:sync",
     "lint": "turbo run lint",
     "services:down": "docker compose --env-file .env -f infra/compose/local-services.compose.yaml down --remove-orphans",
     "services:logs": "docker compose --env-file .env -f infra/compose/local-services.compose.yaml logs --tail=100",
