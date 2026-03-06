@@ -8,6 +8,7 @@ describe('nextConfig', () => {
       '@evolvo/api',
       '@evolvo/core',
       '@evolvo/observability',
+      '@evolvo/query',
       '@evolvo/schemas',
       '@evolvo/tailwind-config',
       '@evolvo/ui'

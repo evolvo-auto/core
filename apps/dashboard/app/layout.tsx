@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Geist } from 'next/font/google';
 
+import DashboardProviders from './providers';
 import './globals.css';
 
 const dashboardFont = Geist({
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(71,217,140,0.2),transparent_34%),radial-gradient(circle_at_top_right,rgba(135,249,182,0.18),transparent_22%),linear-gradient(180deg,#08111a_0%,#05090f_56%,#020406_100%)]" />
           <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(135,249,182,0.08),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(71,217,140,0.16),transparent_28%)]" />
         </div>
-        {children}
+        <DashboardProviders>{children}</DashboardProviders>
       </body>
     </html>
   );

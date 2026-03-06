@@ -1,33 +1,6 @@
-import * as React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@tanstack/react-query', () => ({
-  HydrationBoundary: ({ children }: { children: React.ReactNode }) => children,
-  QueryClient: class {
-    #data: unknown;
-
-    async prefetchQuery({
-      queryFn
-    }: {
-      queryFn: () => Promise<unknown>;
-      queryKey: readonly unknown[];
-    }) {
-      this.#data = await queryFn();
-    }
-
-    getQueryData<T>() {
-      return this.#data as T;
-    }
-  },
-  dehydrate: () => ({})
-}));
-
-vi.mock('./components/platform-health-board', () => ({
-  default: () => <section>Platform health board</section>
-}));
-
-vi.mock('./lib/build-platform-health-snapshot', () => ({
+vi.mock('../../lib/build-platform-health-snapshot', () => ({
   buildPlatformHealthSnapshot: vi.fn().mockResolvedValue({
     generatedAt: '2026-03-06T12:00:00.000Z',
     services: [
@@ -84,25 +57,16 @@ vi.mock('./lib/build-platform-health-snapshot', () => ({
   })
 }));
 
-import DashboardPage from './page';
+import { GET } from './route';
 
-describe('DashboardPage', () => {
-  it('renders live health messaging instead of placeholder copy', async () => {
-    const markup = renderToStaticMarkup(await DashboardPage());
+describe('GET /api/platform-health', () => {
+  it('returns the aggregated platform health snapshot', async () => {
+    const response = await GET();
 
-    expect(markup).toContain(
-      'Live health contracts for dashboard, runtime, and supervisor.'
-    );
-    expect(markup).toContain('Authoritative health probes');
-    expect(markup).toContain('Platform health board');
-    expect(markup).not.toContain('style=');
-  });
-
-  it('renders summary counts for the prefetched snapshot', async () => {
-    const markup = renderToStaticMarkup(await DashboardPage());
-
-    expect(markup).toContain('services healthy');
-    expect(markup).toContain('services unavailable');
-    expect(markup).toContain('The shell now reports real service contracts.');
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      generatedAt: '2026-03-06T12:00:00.000Z',
+      services: expect.any(Array)
+    });
   });
 });
