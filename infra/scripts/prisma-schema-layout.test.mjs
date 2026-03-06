@@ -27,6 +27,7 @@ describe('split Prisma schema layout', () => {
       'benchmarks/benchmark-run.prisma',
       'execution/attempt.prisma',
       'failures/failure-record.prisma',
+      'github/github-audit-event.prisma',
       'invocations/model-invocation.prisma',
       'issues/issue-record.prisma',
       'mutations/mutation-outcome.prisma',

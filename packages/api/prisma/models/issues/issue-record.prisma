@@ -19,6 +19,7 @@ model IssueRecord {
   failures              FailureRecord[]
   mutationProposals     MutationProposal[]
   benchmarkRuns         BenchmarkRun[]
+  githubAuditEvents     GitHubAuditEvent[]
 
   @@index([kind])
   @@index([state])

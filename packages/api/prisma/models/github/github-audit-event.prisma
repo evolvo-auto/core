@@ -1,0 +1,19 @@
+model GitHubAuditEvent {
+  id                String   @id @default(cuid())
+  action            String
+  issueNumber       Int?     @map("issue_number")
+  pullRequestNumber Int?     @map("pull_request_number")
+  repositoryOwner   String   @map("repository_owner")
+  repositoryName    String   @map("repository_name")
+  metadataJson      Json?    @map("metadata_json")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  issue IssueRecord? @relation(fields: [issueNumber], references: [githubIssueNumber])
+
+  @@index([action])
+  @@index([issueNumber])
+  @@index([pullRequestNumber])
+  @@index([createdAt])
+  @@index([repositoryOwner, repositoryName])
+  @@map("github_audit_events")
+}
