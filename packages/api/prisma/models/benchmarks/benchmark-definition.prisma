@@ -1,0 +1,38 @@
+model BenchmarkDefinition {
+  id                String              @id @default(cuid())
+  benchmarkKey      String              @map("benchmark_key")
+  version           Int
+  title             String
+  benchmarkType     BenchmarkType       @map("benchmark_type")
+  challengeId       String?             @map("challenge_id")
+  sourceIssueNumber Int?                @map("source_issue_number")
+  sourceMutationId  String?             @map("source_mutation_id")
+  familyKey         String?             @map("family_key")
+  capabilityTags    String[]            @default([]) @map("capability_tags")
+  isRegressionPack  Boolean             @default(false) @map("is_regression_pack")
+  isHoldout         Boolean             @default(false) @map("is_holdout")
+  isActive          Boolean             @default(true) @map("is_active")
+  lineageParentId   String?             @map("lineage_parent_id")
+  lineageReason     String?             @db.Text @map("lineage_reason")
+  sourceFingerprint String              @map("source_fingerprint")
+  definitionJson    Json                @map("definition_json")
+  scoringConfigJson Json?               @map("scoring_config_json")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  challenge         ChallengeRecord?    @relation(fields: [challengeId], references: [id])
+  sourceIssue       IssueRecord?        @relation("BenchmarkSourceIssue", fields: [sourceIssueNumber], references: [githubIssueNumber])
+  sourceMutation    MutationProposal?   @relation("BenchmarkSourceMutation", fields: [sourceMutationId], references: [id])
+  lineageParent     BenchmarkDefinition? @relation("BenchmarkLineage", fields: [lineageParentId], references: [id])
+  lineageChildren   BenchmarkDefinition[] @relation("BenchmarkLineage")
+  benchmarkRuns     BenchmarkRun[]
+
+  @@unique([benchmarkKey, version])
+  @@index([benchmarkKey, isActive])
+  @@index([benchmarkType])
+  @@index([challengeId])
+  @@index([sourceIssueNumber])
+  @@index([sourceMutationId])
+  @@index([familyKey])
+  @@map("benchmarks")
+}
