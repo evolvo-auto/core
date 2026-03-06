@@ -224,6 +224,22 @@ importers:
         specifier: workspace:*
         version: link:../typescript-config
 
+  packages/orchestration:
+    dependencies:
+      '@evolvo/core':
+        specifier: workspace:*
+        version: link:../core
+      '@evolvo/models':
+        specifier: workspace:*
+        version: link:../models
+      '@evolvo/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+    devDependencies:
+      '@evolvo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+
   packages/query:
     dependencies:
       '@evolvo/schemas':
