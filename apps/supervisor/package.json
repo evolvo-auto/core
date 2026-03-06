@@ -1,15 +1,24 @@
 {
   "name": "@evolvo/supervisor",
   "version": "0.0.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
     "clean": "git clean -fdX .",
+    "dev": "tsx watch src/server.ts",
     "lint": "eslint . --max-warnings 0 --no-error-on-unmatched-pattern",
+    "start": "tsx src/server.ts",
     "test": "vitest run --passWithNoTests --root . --config ../../vitest.config.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
+  "dependencies": {
+    "@evolvo/schemas": "workspace:*",
+    "dotenv": "^17.2.2"
+  },
   "devDependencies": {
-    "@evolvo/typescript-config": "workspace:*"
+    "@evolvo/typescript-config": "workspace:*",
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.5"
   }
 }

@@ -2,12 +2,17 @@
   "$schema": "https://turborepo.com/schema.json",
   "globalEnv": [
     "DATABASE_URL",
+    "DASHBOARD_PORT",
     "POSTGRES_DB",
     "POSTGRES_HOST",
     "POSTGRES_PASSWORD",
     "POSTGRES_PORT",
     "POSTGRES_SCHEMA",
-    "POSTGRES_USER"
+    "POSTGRES_USER",
+    "RUNTIME_HEALTH_URL",
+    "RUNTIME_PORT",
+    "SUPERVISOR_HEALTH_URL",
+    "SUPERVISOR_PORT"
   ],
   "tasks": {
     "build": {

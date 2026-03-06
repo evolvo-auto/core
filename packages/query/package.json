@@ -1,12 +1,11 @@
 {
-  "name": "@evolvo/schemas",
+  "name": "@evolvo/query",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
-    "./health-schemas": "./src/health-schemas.ts",
-    "./role-output-schemas": "./src/role-output-schemas.ts",
-    "./shared-enums": "./src/shared-enums.ts"
+    "./getQueryClient": "./src/getQueryClient.ts",
+    "./health": "./src/health.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
@@ -16,7 +15,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "zod": "^4.1.5"
+    "@tanstack/react-query": "^5.90.2",
+    "@evolvo/schemas": "workspace:*"
   },
   "devDependencies": {
     "@evolvo/typescript-config": "workspace:*"
