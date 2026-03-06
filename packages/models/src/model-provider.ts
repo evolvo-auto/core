@@ -1,20 +1,34 @@
+import { createHash } from 'node:crypto';
+
+import { createModelInvocation } from '@evolvo/api/model-invocation';
 import type { ModelProvider, RoleName } from '@evolvo/core/model-routing-config';
-import type { z } from 'zod';
+import { ZodError, type z } from 'zod';
 
 export const modelResponseModes = ['text', 'json'] as const;
 export type ModelResponseMode = (typeof modelResponseModes)[number];
 
-export type ModelInvocationMetadata = Record<string, unknown>;
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+export type JsonObject = {
+  [key: string]: JsonValue;
+};
+
+export type ModelInvocationMetadata = JsonObject;
 
 export type ModelProviderInvocationRequest<TOutput = unknown> = {
+  attemptId?: string;
+  costEstimate?: number;
+  fallbackUsed?: boolean;
   maxRetries?: number;
   maxTokens?: number;
   metadata?: ModelInvocationMetadata;
   model: string;
+  persistMetrics?: boolean;
   responseMode?: ModelResponseMode;
   role: RoleName;
   schema?: z.ZodType<TOutput>;
   systemPrompt?: string;
+  taskKind?: string;
   temperature?: number;
   timeoutMs?: number;
   userPrompt: string;
@@ -23,13 +37,18 @@ export type ModelProviderInvocationRequest<TOutput = unknown> = {
 export type ModelProviderInvocationResult<TOutput = unknown> = {
   attempts: number;
   durationMs: number;
+  fallbackUsed: boolean;
   metadata?: ModelInvocationMetadata;
   model: string;
   output: TOutput;
   provider: ModelProvider;
   rawText: string;
+  repairAttempted: boolean;
+  repairSucceeded: boolean;
   responseMode: ModelResponseMode;
   role: RoleName;
+  schemaValid: boolean | null;
+  taskKind: string;
 };
 
 export type ModelProviderClient = {
@@ -41,11 +60,22 @@ export type ModelProviderClient = {
 
 export type ProviderInvocationRequest<TOutput = unknown> = Omit<
   ModelProviderInvocationRequest<TOutput>,
-  'maxRetries' | 'responseMode' | 'systemPrompt' | 'timeoutMs' | 'userPrompt'
+  | 'costEstimate'
+  | 'maxRetries'
+  | 'persistMetrics'
+  | 'responseMode'
+  | 'systemPrompt'
+  | 'taskKind'
+  | 'timeoutMs'
+  | 'userPrompt'
 > & {
+  costEstimate?: number;
+  fallbackUsed: boolean;
   maxRetries: number;
+  persistMetrics: boolean;
   responseMode: ModelResponseMode;
   systemPrompt?: string;
+  taskKind: string;
   timeoutMs?: number;
   userPrompt: string;
 };
@@ -54,6 +84,13 @@ export type ProviderInvokeOnce = <TOutput = unknown>(
   request: ProviderInvocationRequest<TOutput>,
   signal: AbortSignal | undefined
 ) => Promise<string>;
+
+class StructuredOutputValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'StructuredOutputValidationError';
+  }
+}
 
 function normalizeOptionalText(value: string | undefined): string | undefined {
   const normalizedValue = value?.trim();
@@ -73,6 +110,10 @@ function normalizeRequiredText(value: string, fieldName: string): string {
   }
 
   return normalizedValue;
+}
+
+function normalizeTaskKind(taskKind: string | undefined): string {
+  return normalizeRequiredText(taskKind ?? 'general', 'taskKind');
 }
 
 function normalizeRetryCount(maxRetries: number | undefined): number {
@@ -127,6 +168,20 @@ function normalizeTemperature(
   return temperature;
 }
 
+function normalizeCostEstimate(
+  costEstimate: number | undefined
+): number | undefined {
+  if (costEstimate === undefined) {
+    return undefined;
+  }
+
+  if (!Number.isFinite(costEstimate) || costEstimate < 0) {
+    throw new Error('Model invocation costEstimate must be non-negative.');
+  }
+
+  return costEstimate;
+}
+
 function resolveResponseMode(
   request: ModelProviderInvocationRequest<unknown>
 ): ModelResponseMode {
@@ -143,14 +198,19 @@ function normalizeInvocationRequest<TOutput = unknown>(
   request: ModelProviderInvocationRequest<TOutput>
 ): ProviderInvocationRequest<TOutput> {
   return {
+    attemptId: normalizeOptionalText(request.attemptId),
+    costEstimate: normalizeCostEstimate(request.costEstimate),
+    fallbackUsed: request.fallbackUsed ?? false,
     maxRetries: normalizeRetryCount(request.maxRetries),
     maxTokens: normalizeMaxTokens(request.maxTokens),
     metadata: request.metadata,
     model: normalizeRequiredText(request.model, 'model'),
+    persistMetrics: request.persistMetrics ?? true,
     responseMode: resolveResponseMode(request),
     role: request.role,
     schema: request.schema,
     systemPrompt: normalizeOptionalText(request.systemPrompt),
+    taskKind: normalizeTaskKind(request.taskKind),
     temperature: normalizeTemperature(request.temperature),
     timeoutMs: normalizeTimeout(request.timeoutMs),
     userPrompt: normalizeRequiredText(request.userPrompt, 'userPrompt')
@@ -160,9 +220,15 @@ function normalizeInvocationRequest<TOutput = unknown>(
 function parseStructuredOutput<TOutput = unknown>(
   rawText: string,
   request: ProviderInvocationRequest<TOutput>
-): TOutput {
+): {
+  output: TOutput;
+  schemaValid: boolean | null;
+} {
   if (!request.schema && request.responseMode === 'text') {
-    return rawText as TOutput;
+    return {
+      output: rawText as TOutput,
+      schemaValid: null
+    };
   }
 
   let parsedJson: unknown;
@@ -173,16 +239,32 @@ function parseStructuredOutput<TOutput = unknown>(
     const parseError =
       error instanceof Error ? error.message : 'Unknown JSON parse failure.';
 
-    throw new Error(
+    throw new StructuredOutputValidationError(
       `Model invocation expected JSON output but received invalid JSON: ${parseError}`
     );
   }
 
   if (!request.schema) {
-    return parsedJson as TOutput;
+    return {
+      output: parsedJson as TOutput,
+      schemaValid: true
+    };
   }
 
-  return request.schema.parse(parsedJson);
+  try {
+    return {
+      output: request.schema.parse(parsedJson),
+      schemaValid: true
+    };
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new StructuredOutputValidationError(
+        `Model invocation schema validation failed: ${error.issues.map((issue) => issue.message).join('; ')}`
+      );
+    }
+
+    throw error;
+  }
 }
 
 function toErrorMessage(error: unknown): string {
@@ -191,6 +273,127 @@ function toErrorMessage(error: unknown): string {
   }
 
   return String(error);
+}
+
+function buildPromptHash(
+  systemPrompt: string | undefined,
+  userPrompt: string
+): string {
+  const hash = createHash('sha256');
+  hash.update(systemPrompt ?? '');
+  hash.update('\n\n');
+  hash.update(userPrompt);
+
+  return hash.digest('hex');
+}
+
+function buildRepairUserPrompt(
+  request: ProviderInvocationRequest,
+  invalidRawText: string,
+  validationErrorMessage: string
+): string {
+  return [
+    'You previously returned output that did not satisfy the required JSON contract.',
+    'Return only valid JSON with no markdown and no additional commentary.',
+    '',
+    `Role: ${request.role}`,
+    `Task kind: ${request.taskKind}`,
+    `Validation error: ${validationErrorMessage}`,
+    '',
+    'Original prompt:',
+    request.userPrompt,
+    '',
+    'Invalid output:',
+    invalidRawText
+  ].join('\n');
+}
+
+function buildRepairRequest<TOutput = unknown>(
+  request: ProviderInvocationRequest<TOutput>,
+  invalidRawText: string,
+  validationErrorMessage: string
+): ProviderInvocationRequest<TOutput> {
+  return {
+    ...request,
+    responseMode: 'json',
+    systemPrompt: request.systemPrompt
+      ? `${request.systemPrompt}\n\nYou must return strictly valid JSON.`
+      : 'Return strictly valid JSON.',
+    userPrompt: buildRepairUserPrompt(
+      request,
+      invalidRawText,
+      validationErrorMessage
+    )
+  };
+}
+
+function buildInvocationMetadata(
+  request: ProviderInvocationRequest,
+  options: {
+    attempts: number;
+    failureError?: unknown;
+    repairAttempted: boolean;
+    repairSucceeded: boolean;
+    schemaValid: boolean | null;
+    validationErrorMessage?: string;
+  }
+): ModelInvocationMetadata {
+  const metadata: ModelInvocationMetadata = {
+    ...(request.metadata ?? {}),
+    attempts: options.attempts,
+    repairAttempted: options.repairAttempted,
+    repairSucceeded: options.repairSucceeded,
+    responseMode: request.responseMode,
+    schemaValid: options.schemaValid
+  };
+
+  if (options.validationErrorMessage) {
+    metadata.validationErrorMessage = options.validationErrorMessage;
+  }
+
+  if (options.failureError) {
+    metadata.failureError = toErrorMessage(options.failureError);
+  }
+
+  return metadata;
+}
+
+async function persistModelInvocationMetrics(
+  provider: ModelProvider,
+  request: ProviderInvocationRequest,
+  options: {
+    attempts: number;
+    durationMs: number;
+    failureError?: unknown;
+    repairAttempted: boolean;
+    repairSucceeded: boolean;
+    schemaValid: boolean | null;
+    success: boolean;
+    validationErrorMessage?: string;
+  }
+): Promise<void> {
+  if (!request.persistMetrics) {
+    return;
+  }
+
+  try {
+    await createModelInvocation({
+      attemptId: request.attemptId,
+      costEstimate: request.costEstimate,
+      durationMs: options.durationMs,
+      fallbackUsed: request.fallbackUsed,
+      metadataJson: buildInvocationMetadata(request, options),
+      model: request.model,
+      promptHash: buildPromptHash(request.systemPrompt, request.userPrompt),
+      provider,
+      role: request.role,
+      schemaValid: options.schemaValid,
+      success: options.success,
+      taskKind: request.taskKind
+    });
+  } catch {
+    // Model invocation metrics are best-effort and must not break execution flow.
+  }
 }
 
 function createAbortSignal(timeoutMs: number | undefined): {
@@ -234,38 +437,134 @@ export async function invokeWithRetryAndTimeout<TOutput = unknown>(
   invokeOnce: ProviderInvokeOnce
 ): Promise<ModelProviderInvocationResult<TOutput>> {
   const normalizedRequest = normalizeInvocationRequest(request);
-  const maxAttempts = normalizedRequest.maxRetries + 1;
+  const maxPrimaryAttempts = normalizedRequest.maxRetries + 1;
   const startedAt = Date.now();
   let attempts = 0;
+  let repairAttempted = false;
+  let repairSucceeded = false;
+  let sawStructuredValidationFailure = false;
+  let validationErrorMessage: string | undefined;
   let latestError: unknown;
 
-  while (attempts < maxAttempts) {
-    attempts += 1;
+  for (
+    let primaryAttempt = 0;
+    primaryAttempt < maxPrimaryAttempts;
+    primaryAttempt += 1
+  ) {
     const { clearTimeoutHandle, signal } = createAbortSignal(
       normalizedRequest.timeoutMs
     );
 
     try {
+      attempts += 1;
       const rawText = await invokeOnce(normalizedRequest, signal);
-      const output = parseStructuredOutput(rawText, normalizedRequest);
 
-      return {
-        attempts,
-        durationMs: Date.now() - startedAt,
-        metadata: normalizedRequest.metadata,
-        model: normalizedRequest.model,
-        output,
-        provider,
-        rawText,
-        responseMode: normalizedRequest.responseMode,
-        role: normalizedRequest.role
-      };
+      try {
+        const parsedOutput = parseStructuredOutput(rawText, normalizedRequest);
+        const durationMs = Date.now() - startedAt;
+
+        await persistModelInvocationMetrics(provider, normalizedRequest, {
+          attempts,
+          durationMs,
+          repairAttempted,
+          repairSucceeded,
+          schemaValid: parsedOutput.schemaValid,
+          success: true,
+          validationErrorMessage
+        });
+
+        return {
+          attempts,
+          durationMs,
+          fallbackUsed: normalizedRequest.fallbackUsed,
+          metadata: normalizedRequest.metadata,
+          model: normalizedRequest.model,
+          output: parsedOutput.output,
+          provider,
+          rawText,
+          repairAttempted,
+          repairSucceeded,
+          responseMode: normalizedRequest.responseMode,
+          role: normalizedRequest.role,
+          schemaValid: parsedOutput.schemaValid,
+          taskKind: normalizedRequest.taskKind
+        };
+      } catch (error) {
+        if (
+          !(error instanceof StructuredOutputValidationError) ||
+          normalizedRequest.responseMode !== 'json'
+        ) {
+          throw error;
+        }
+
+        repairAttempted = true;
+        sawStructuredValidationFailure = true;
+        validationErrorMessage = error.message;
+
+        attempts += 1;
+        const repairedRawText = await invokeOnce(
+          buildRepairRequest(normalizedRequest, rawText, error.message),
+          signal
+        );
+        const repairedOutput = parseStructuredOutput(
+          repairedRawText,
+          normalizedRequest
+        );
+        const durationMs = Date.now() - startedAt;
+
+        repairSucceeded = true;
+
+        await persistModelInvocationMetrics(provider, normalizedRequest, {
+          attempts,
+          durationMs,
+          repairAttempted,
+          repairSucceeded,
+          schemaValid: repairedOutput.schemaValid,
+          success: true,
+          validationErrorMessage
+        });
+
+        return {
+          attempts,
+          durationMs,
+          fallbackUsed: normalizedRequest.fallbackUsed,
+          metadata: normalizedRequest.metadata,
+          model: normalizedRequest.model,
+          output: repairedOutput.output,
+          provider,
+          rawText: repairedRawText,
+          repairAttempted,
+          repairSucceeded,
+          responseMode: normalizedRequest.responseMode,
+          role: normalizedRequest.role,
+          schemaValid: repairedOutput.schemaValid,
+          taskKind: normalizedRequest.taskKind
+        };
+      }
     } catch (error) {
       latestError = error;
+
+      if (error instanceof StructuredOutputValidationError) {
+        sawStructuredValidationFailure = true;
+        validationErrorMessage = error.message;
+      }
     } finally {
       clearTimeoutHandle();
     }
   }
+
+  const durationMs = Date.now() - startedAt;
+
+  await persistModelInvocationMetrics(provider, normalizedRequest, {
+    attempts,
+    durationMs,
+    failureError: latestError,
+    repairAttempted,
+    repairSucceeded,
+    schemaValid: sawStructuredValidationFailure ? false : null,
+    success: false,
+    validationErrorMessage
+  });
 
   throw buildInvocationFailureError(
     provider,
