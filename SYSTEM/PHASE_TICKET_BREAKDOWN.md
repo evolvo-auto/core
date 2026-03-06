@@ -219,9 +219,17 @@ Resolve role + capability to provider/model.
 
 ### P2-005 Add structured output validation and repair
 
+Status: done
+Branch: `feature/P2-005-006-structured-output-metrics`
+PR: `#25`
+
 Retry/repair invalid outputs.
 
 ### P2-006 Store model invocation metrics
+
+Status: done
+Branch: `feature/P2-005-006-structured-output-metrics`
+PR: `#25`
 
 Persist latency, schema validity, fallback use, and outcome metadata.
 
