@@ -8,24 +8,41 @@ export type DatabaseUrlInput = {
   user?: string;
 };
 
-const DEFAULT_DATABASE = 'evolvo';
-const DEFAULT_HOST = 'localhost';
-const DEFAULT_PASSWORD = 'evolvo';
-const DEFAULT_PORT = '5432';
-const DEFAULT_SCHEMA = 'public';
-const DEFAULT_USER = 'evolvo';
+const REQUIRED_COMPONENTS = [
+  ['database', 'POSTGRES_DB'],
+  ['host', 'POSTGRES_HOST'],
+  ['password', 'POSTGRES_PASSWORD'],
+  ['port', 'POSTGRES_PORT'],
+  ['schema', 'POSTGRES_SCHEMA'],
+  ['user', 'POSTGRES_USER']
+] as const;
 
 export function buildDatabaseUrl(input: DatabaseUrlInput = {}): string {
   if (input.url?.trim()) {
     return input.url.trim();
   }
 
-  const database = input.database ?? DEFAULT_DATABASE;
-  const host = input.host ?? DEFAULT_HOST;
-  const password = input.password ?? DEFAULT_PASSWORD;
-  const port = String(input.port ?? DEFAULT_PORT);
-  const schema = input.schema ?? DEFAULT_SCHEMA;
-  const user = input.user ?? DEFAULT_USER;
+  const missingVariables = REQUIRED_COMPONENTS.flatMap(([field, envVar]) => {
+    const value = input[field];
+    return typeof value === 'string' && value.trim().length > 0
+      ? []
+      : value !== undefined && value !== null && String(value).trim().length > 0
+        ? []
+        : [envVar];
+  });
+
+  if (missingVariables.length > 0) {
+    throw new Error(
+      `Missing required database environment variables: ${missingVariables.join(', ')}`
+    );
+  }
+
+  const database = input.database!.trim();
+  const host = input.host!.trim();
+  const password = input.password!.trim();
+  const port = String(input.port).trim();
+  const schema = input.schema!.trim();
+  const user = input.user!.trim();
   const params = new URLSearchParams({ schema });
 
   return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}?${params.toString()}`;

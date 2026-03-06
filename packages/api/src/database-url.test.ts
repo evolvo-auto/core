@@ -26,9 +26,14 @@ describe('database URL helpers', () => {
     );
   });
 
-  it('falls back to the local development defaults', () => {
-    expect(buildDatabaseUrl()).toBe(
-      'postgresql://evolvo:evolvo@localhost:5432/evolvo?schema=public'
+  it('fails when required Postgres component env values are missing', () => {
+    expect(() =>
+      buildDatabaseUrl({
+        database: 'runtime',
+        host: 'db.internal'
+      })
+    ).toThrowError(
+      'Missing required database environment variables: POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_SCHEMA, POSTGRES_USER'
     );
   });
 });
