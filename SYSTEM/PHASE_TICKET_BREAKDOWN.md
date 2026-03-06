@@ -132,6 +132,10 @@ Classify issues into kinds, sources, and surfaces.
 
 ### P1-005 Add issue state transition helpers
 
+Status: done
+Branch: `feature/P1-005-add-issue-state-transition-helpers`
+PR: `#16`
+
 Implement functions to safely move issues between `state:*` labels.
 
 ### P1-006 Implement issue comment writer
