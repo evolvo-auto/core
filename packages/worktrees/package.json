@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./branch-name": "./src/branch-name.ts"
+    "./branch-name": "./src/branch-name.ts",
+    "./command-runner": "./src/command-runner.ts",
+    "./creation": "./src/creation.ts",
+    "./hydration": "./src/hydration.ts",
+    "./reservation": "./src/reservation.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
@@ -12,6 +16,9 @@
     "lint": "eslint . --max-warnings 0 --no-error-on-unmatched-pattern",
     "test": "vitest run --root . --config ../../vitest.config.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@evolvo/api": "workspace:*"
   },
   "devDependencies": {
     "@evolvo/typescript-config": "workspace:*"
