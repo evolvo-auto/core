@@ -187,13 +187,25 @@ multi-role cognition with OpenAI and Ollama.
 
 ### P2-001 Create provider abstraction interface
 
+Status: done
+Branch: `feature/P2-001-002-003-provider-abstractions`
+PR: `#23`
+
 Uniform interface for model invocation.
 
 ### P2-002 Implement OpenAI provider
 
+Status: done
+Branch: `feature/P2-001-002-003-provider-abstractions`
+PR: `#23`
+
 Support structured and freeform outputs.
 
 ### P2-003 Implement Ollama provider
+
+Status: done
+Branch: `feature/P2-001-002-003-provider-abstractions`
+PR: `#23`
 
 Support structured and freeform outputs through local models.
 
