@@ -11,7 +11,7 @@ type DashboardProvidersProps = {
 export default function DashboardProviders({
   children
 }: DashboardProvidersProps) {
-  const queryClient = getQueryClient()
+  const queryClient = getQueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

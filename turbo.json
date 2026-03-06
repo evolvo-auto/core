@@ -3,6 +3,9 @@
   "globalEnv": [
     "DATABASE_URL",
     "DASHBOARD_PORT",
+    "GITHUB_OWNER",
+    "GITHUB_REPO",
+    "GITHUB_TOKEN",
     "POSTGRES_DB",
     "POSTGRES_HOST",
     "POSTGRES_PASSWORD",
