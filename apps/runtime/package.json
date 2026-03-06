@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@evolvo/execution": "workspace:*",
     "@evolvo/schemas": "workspace:*",
     "dotenv": "^17.2.2"
   },

@@ -5,7 +5,11 @@ import { createRuntimeServer } from './http-server.js';
 const serversToClose: Array<ReturnType<typeof createRuntimeServer>> = [];
 
 async function withRuntimeServer() {
-  const server = createRuntimeServer(new Date('2026-03-06T12:00:00.000Z'));
+  const server = createRuntimeServer(new Date('2026-03-06T12:00:00.000Z'), () => ({
+    consecutiveFailures: 0,
+    lastOutcome: 'idle',
+    state: 'sleeping'
+  }));
   serversToClose.push(server);
 
   await new Promise<void>((resolve) => {
