@@ -287,6 +287,10 @@ importers:
         version: 3.2.4(@types/node@24.12.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/worktrees:
+    dependencies:
+      '@evolvo/api':
+        specifier: workspace:*
+        version: link:../api
     devDependencies:
       '@evolvo/typescript-config':
         specifier: workspace:*
