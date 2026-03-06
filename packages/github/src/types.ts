@@ -268,3 +268,19 @@ export type UpdatePullRequestInput = {
   state?: UpdatePullRequestParameters['state'];
   title?: UpdatePullRequestParameters['title'];
 };
+
+export type UpsertPullRequestFromBranchInput = {
+  base: CreatePullRequestParameters['base'];
+  body?: CreatePullRequestParameters['body'];
+  branchName: string;
+  draft?: CreatePullRequestParameters['draft'];
+  maintainerCanModify?: CreatePullRequestParameters['maintainer_can_modify'];
+  title: CreatePullRequestParameters['title'];
+};
+
+export type UpsertPullRequestFromBranchResult = {
+  action: 'created' | 'updated';
+  branchName: string;
+  pullRequest: GitHubPullRequest;
+  pullRequestNumber: number;
+};
