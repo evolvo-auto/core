@@ -200,6 +200,9 @@ importers:
 
   packages/models:
     dependencies:
+      '@evolvo/api':
+        specifier: workspace:*
+        version: link:../api
       '@evolvo/core':
         specifier: workspace:*
         version: link:../core

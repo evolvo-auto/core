@@ -1,9 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+
+import { createModelInvocation } from '@evolvo/api/model-invocation';
 
 import { createOllamaProvider } from './ollama-provider.js';
 
+vi.mock('@evolvo/api/model-invocation', () => ({
+  createModelInvocation: vi.fn()
+}));
+
+const mockedCreateModelInvocation = vi.mocked(createModelInvocation);
+
 describe('ollama provider', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('invokes Ollama chat endpoint for freeform text output', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
@@ -17,6 +29,8 @@ describe('ollama provider', () => {
         }
       )
     );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_1' } as never);
+
     const provider = createOllamaProvider({
       baseUrl: 'http://127.0.0.1:11434/',
       fetchImplementation: fetchMock as unknown as typeof fetch
@@ -64,6 +78,12 @@ describe('ollama provider', () => {
       },
       stream: false
     });
+    expect(mockedCreateModelInvocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'ollama',
+        success: true
+      })
+    );
   });
 
   it('supports structured output with json format mode', async () => {
@@ -79,6 +99,8 @@ describe('ollama provider', () => {
         }
       )
     );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_2' } as never);
+
     const provider = createOllamaProvider({
       baseUrl: 'http://127.0.0.1:11434',
       fetchImplementation: fetchMock as unknown as typeof fetch
@@ -124,6 +146,8 @@ describe('ollama provider', () => {
           }
         )
       );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_3' } as never);
+
     const provider = createOllamaProvider({
       baseUrl: 'http://127.0.0.1:11434',
       fetchImplementation: fetchMock as unknown as typeof fetch
@@ -152,6 +176,8 @@ describe('ollama provider', () => {
         }
       )
     );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_4' } as never);
+
     const provider = createOllamaProvider({
       baseUrl: 'http://127.0.0.1:11434',
       fetchImplementation: fetchMock as unknown as typeof fetch
@@ -164,6 +190,12 @@ describe('ollama provider', () => {
         userPrompt: 'Test missing model.'
       })
     ).rejects.toThrow('Ollama API request failed with status 404: model not found');
+    expect(mockedCreateModelInvocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'ollama',
+        success: false
+      })
+    );
   });
 
   it('validates baseUrl at provider creation time', () => {

@@ -1,9 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+
+import { createModelInvocation } from '@evolvo/api/model-invocation';
 
 import { createOpenAIProvider } from './openai-provider.js';
 
+vi.mock('@evolvo/api/model-invocation', () => ({
+  createModelInvocation: vi.fn()
+}));
+
+const mockedCreateModelInvocation = vi.mocked(createModelInvocation);
+
 describe('openai provider', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('invokes chat completions for freeform text output', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
@@ -21,6 +33,8 @@ describe('openai provider', () => {
         }
       )
     );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_1' } as never);
+
     const provider = createOpenAIProvider({
       apiKey: 'openai-token',
       baseUrl: 'https://api.openai.com/v1/',
@@ -67,6 +81,12 @@ describe('openai provider', () => {
       model: 'gpt-5.3-codex',
       temperature: 0.1
     });
+    expect(mockedCreateModelInvocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'openai',
+        success: true
+      })
+    );
   });
 
   it('supports structured output and requests json response format', async () => {
@@ -86,6 +106,8 @@ describe('openai provider', () => {
         }
       )
     );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_2' } as never);
+
     const provider = createOpenAIProvider({
       apiKey: 'openai-token',
       baseUrl: 'https://api.openai.com/v1',
@@ -136,6 +158,8 @@ describe('openai provider', () => {
           }
         )
       );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_3' } as never);
+
     const provider = createOpenAIProvider({
       apiKey: 'openai-token',
       baseUrl: 'https://api.openai.com/v1',
@@ -167,6 +191,8 @@ describe('openai provider', () => {
         }
       )
     );
+    mockedCreateModelInvocation.mockResolvedValue({ id: 'inv_4' } as never);
+
     const provider = createOpenAIProvider({
       apiKey: 'openai-token',
       baseUrl: 'https://api.openai.com/v1',
@@ -181,6 +207,12 @@ describe('openai provider', () => {
       })
     ).rejects.toThrow(
       'OpenAI API request failed with status 401: invalid auth token'
+    );
+    expect(mockedCreateModelInvocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'openai',
+        success: false
+      })
     );
   });
 
