@@ -224,4 +224,100 @@ describe('runBuilderOrchestration', () => {
       });
     }
   });
+
+  it('derives missing command suggestion names before running safe follow-up commands', async () => {
+    const worktreePath = await mkdtemp(join(tmpdir(), 'evolvo-builder-'));
+    const executeCommand = vi
+      .fn()
+      .mockResolvedValueOnce({
+        result: {
+          stdout: 'packages/execution/src/runtime-loop.ts\n'
+        }
+      })
+      .mockResolvedValueOnce({
+        result: {
+          stdout: ''
+        }
+      })
+      .mockResolvedValueOnce({
+        result: {
+          stdout: ''
+        }
+      })
+      .mockResolvedValueOnce({
+        result: {
+          stdout: ''
+        }
+      });
+    const invokeRole = vi.fn().mockImplementation(async (input) => ({
+      output: input.schema.parse({
+        believesReadyForEvaluation: true,
+        commandsSuggested: [
+          {
+            command: 'pnpm typecheck'
+          }
+        ],
+        filesIntendedToChange: ['packages/execution/src/runtime-loop.ts'],
+        implementationNotes: ['Added the scheduler loop.'],
+        issueNumber: 701,
+        patch:
+          'diff --git a/packages/execution/src/runtime-loop.ts b/packages/execution/src/runtime-loop.ts\nindex 1111111..2222222 100644\n--- a/packages/execution/src/runtime-loop.ts\n+++ b/packages/execution/src/runtime-loop.ts\n@@ -1 +1 @@\n-old\n+new\n',
+        possibleKnownRisks: [],
+        summary: 'Implemented the runtime loop.'
+      })
+    }));
+    const detectChanges = vi.fn().mockResolvedValue({
+      actualChangedFiles: ['packages/execution/src/runtime-loop.ts'],
+      diffSummary: '1 file changed',
+      hasChanges: true,
+      intendedOnlyFiles: [],
+      unexpectedChangedFiles: []
+    });
+
+    try {
+      const result = await runBuilderOrchestration(
+        {
+          attemptId: 'att_703',
+          issueNumber: 701,
+          journalPath: `${worktreePath}/.evolvo/attempt-journal.json`,
+          plannerOutput,
+          title: 'Implement runtime loop',
+          worktreeId: 'wt_703',
+          worktreePath
+        },
+        {
+          buildContext: vi.fn().mockResolvedValue([]),
+          detectChanges,
+          executeCommand: executeCommand as never,
+          invokeRole
+        }
+      );
+
+      expect(result.builderOutput.commandsSuggested).toEqual([
+        {
+          command: 'pnpm typecheck',
+          name: 'pnpm-typecheck'
+        }
+      ]);
+      expect(executeCommand).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({
+          args: ['typecheck'],
+          command: 'pnpm'
+        })
+      );
+      expect(invokeRole).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringContaining(
+            'Each item must be an object with name, command, optional cwd, and optional timeoutMs.'
+          )
+        })
+      );
+    } finally {
+      await rm(worktreePath, {
+        force: true,
+        recursive: true
+      });
+    }
+  });
 });

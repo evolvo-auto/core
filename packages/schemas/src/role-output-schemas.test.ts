@@ -289,6 +289,39 @@ describe('role output schemas', () => {
     });
   });
 
+  it('derives command suggestion names from commands when models omit them', () => {
+    expect(
+      builderOutputSchema.parse({
+        issueNumber: 6,
+        summary: 'Added the schema package and tests.',
+        filesIntendedToChange: ['packages/schemas/src/role-output-schemas.ts'],
+        filesActuallyChanged: ['packages/schemas/src/role-output-schemas.ts'],
+        commandsSuggested: [
+          {
+            command: 'pnpm typecheck'
+          },
+          {
+            command: 'git diff'
+          }
+        ],
+        implementationNotes: ['Shared enums are split from role schemas.'],
+        possibleKnownRisks: ['Future schema drift if docs change.'],
+        believesReadyForEvaluation: true
+      })
+    ).toMatchObject({
+      commandsSuggested: [
+        {
+          command: 'pnpm typecheck',
+          name: 'pnpm-typecheck'
+        },
+        {
+          command: 'git diff',
+          name: 'git-diff'
+        }
+      ]
+    });
+  });
+
   it('rejects score fields outside the documented range', () => {
     expect(() =>
       selectorDecisionSchema.parse({

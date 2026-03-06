@@ -7,6 +7,7 @@ import type {
   BuilderOutput,
   PlannerOutput
 } from '@evolvo/schemas/role-output-schemas';
+import { commandSuggestionSchema } from '@evolvo/schemas/role-output-schemas';
 import { executeWorktreeCommand } from '@evolvo/worktrees/execution-engine';
 import { z } from 'zod';
 
@@ -15,13 +16,6 @@ import { buildRepositoryContext } from './repository-context.js';
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const positiveIntegerSchema = z.number().int().positive();
-
-const commandSuggestionSchema = z.object({
-  command: nonEmptyStringSchema,
-  cwd: nonEmptyStringSchema.optional(),
-  name: nonEmptyStringSchema,
-  timeoutMs: positiveIntegerSchema.optional()
-});
 
 const builderPatchPlanSchema = z.object({
   believesReadyForEvaluation: z.boolean(),
@@ -82,7 +76,10 @@ function buildBuilderSystemPrompt(): string {
     'Implement the plan by returning a JSON object that matches BuilderPatchPlan.',
     'The patch must be a valid unified diff against the current worktree rooted at the repository root.',
     'Do not wrap the patch in markdown fences.',
-    'Only suggest commands that are safe local developer commands such as pnpm, npm, node, git diff, or git status.'
+    'Only suggest commands that are safe local developer commands such as pnpm, npm, node, git diff, or git status.',
+    'commandsSuggested must always be an array of objects shaped like {"name":"pnpm-typecheck","command":"pnpm typecheck","cwd":"packages/execution","timeoutMs":60000}.',
+    'If there are no follow-up commands, return commandsSuggested as [].',
+    'Every commandsSuggested item must include both name and command.'
   ].join('\n');
 }
 
@@ -129,7 +126,36 @@ function buildBuilderUserPrompt(input: {
     '2. summary, implementationNotes, and possibleKnownRisks.',
     '3. filesIntendedToChange listing the files you plan to touch.',
     '4. patch as a unified diff that can be applied with git apply.',
-    '5. commandsSuggested for any safe follow-up commands that should run after patch application.'
+    '5. commandsSuggested for any safe follow-up commands that should run after patch application.',
+    '',
+    'commandsSuggested rules:',
+    '- Use [] when no follow-up commands are needed.',
+    '- Each item must be an object with name, command, optional cwd, and optional timeoutMs.',
+    '- Example: {"name":"pnpm-typecheck","command":"pnpm typecheck","cwd":"packages/execution","timeoutMs":60000}',
+    '',
+    'BuilderPatchPlan JSON shape:',
+    JSON.stringify(
+      {
+        believesReadyForEvaluation: true,
+        commandsSuggested: [
+          {
+            command: 'pnpm typecheck',
+            cwd: 'packages/execution',
+            name: 'pnpm-typecheck',
+            timeoutMs: 60000
+          }
+        ],
+        filesIntendedToChange: ['packages/execution/src/runtime-loop.ts'],
+        implementationNotes: ['Implemented the scheduler loop.'],
+        issueNumber: input.plannerOutput.issueNumber,
+        patch:
+          'diff --git a/packages/execution/src/runtime-loop.ts b/packages/execution/src/runtime-loop.ts\\n...',
+        possibleKnownRisks: ['Smoke coverage may still be shallow.'],
+        summary: 'Implemented the runtime loop.'
+      },
+      null,
+      2
+    )
   ].join('\n');
 }
 
