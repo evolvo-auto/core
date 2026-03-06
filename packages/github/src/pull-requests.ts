@@ -1,10 +1,13 @@
 import { getGitHubContext } from './auth.js';
+import { getIssue } from './issues.js';
 import type {
   CreatePullRequestInput,
   GitHubContext,
   GitHubPullRequest,
   GitHubPullRequestListItem,
   ListRepositoryPullRequestsOptions,
+  SyncPullRequestLabelsOptions,
+  SyncPullRequestLabelsResult,
   UpsertPullRequestFromBranchInput,
   UpsertPullRequestFromBranchResult,
   UpdatePullRequestInput
@@ -15,6 +18,103 @@ type NormalizedPullRequestBranchReference = {
   createHead: string;
   listHead: string;
 };
+
+type IssueLabelLike = { name?: string | null } | string;
+
+const defaultPullRequestLabelMirrorPrefixes = ['kind:', 'surface:', 'risk:'];
+
+function normalizeLabelName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+function extractLabelName(label: IssueLabelLike): string | undefined {
+  if (typeof label === 'string') {
+    const normalizedLabel = normalizeLabelName(label);
+
+    return normalizedLabel.length > 0 ? normalizedLabel : undefined;
+  }
+
+  const normalizedLabel = normalizeLabelName(label.name ?? '');
+
+  return normalizedLabel.length > 0 ? normalizedLabel : undefined;
+}
+
+function collectUniqueLabelNames(labels: IssueLabelLike[]): string[] {
+  const uniqueLabels: string[] = [];
+  const seenLabels = new Set<string>();
+
+  for (const label of labels) {
+    const labelName = extractLabelName(label);
+
+    if (!labelName || seenLabels.has(labelName)) {
+      continue;
+    }
+
+    seenLabels.add(labelName);
+    uniqueLabels.push(labelName);
+  }
+
+  return uniqueLabels;
+}
+
+function normalizeMirrorPrefixes(prefixes: string[] | undefined): string[] {
+  const sourcePrefixes = prefixes ?? defaultPullRequestLabelMirrorPrefixes;
+  const normalizedPrefixes: string[] = [];
+  const seenPrefixes = new Set<string>();
+
+  for (const prefix of sourcePrefixes) {
+    const normalizedPrefix = normalizeLabelName(prefix);
+
+    if (!normalizedPrefix || seenPrefixes.has(normalizedPrefix)) {
+      continue;
+    }
+
+    seenPrefixes.add(normalizedPrefix);
+    normalizedPrefixes.push(normalizedPrefix);
+  }
+
+  if (normalizedPrefixes.length === 0) {
+    throw new Error(
+      'At least one pull request label mirror prefix is required.'
+    );
+  }
+
+  return normalizedPrefixes;
+}
+
+function hasMirroredPrefix(labelName: string, prefixes: string[]): boolean {
+  for (const prefix of prefixes) {
+    if (labelName.startsWith(prefix)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isSameLabelSet(
+  currentLabels: string[],
+  nextLabels: string[]
+): boolean {
+  if (currentLabels.length !== nextLabels.length) {
+    return false;
+  }
+
+  const currentSet = new Set(currentLabels);
+  const nextSet = new Set(nextLabels);
+
+  if (currentSet.size !== nextSet.size) {
+    return false;
+  }
+
+  for (const label of currentSet) {
+    if (!nextSet.has(label)) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 function normalizePullRequestBranchReference(
   branchReference: string,
@@ -182,5 +282,82 @@ export async function upsertPullRequestFromBranch(
     branchName: normalizedBranchReference.branchName,
     pullRequest,
     pullRequestNumber: pullRequest.number
+  };
+}
+
+async function listPullRequestLabelNames(
+  pullRequestNumber: number,
+  context: GitHubContext
+): Promise<string[]> {
+  const { data } = await context.octokit.rest.issues.listLabelsOnIssue({
+    ...context.repository,
+    issue_number: pullRequestNumber,
+    per_page: 100
+  });
+
+  return collectUniqueLabelNames(data as IssueLabelLike[]);
+}
+
+async function replacePullRequestLabels(
+  pullRequestNumber: number,
+  labelNames: string[],
+  context: GitHubContext
+): Promise<void> {
+  await context.octokit.rest.issues.setLabels({
+    ...context.repository,
+    issue_number: pullRequestNumber,
+    labels: labelNames
+  });
+}
+
+export async function syncPullRequestLabelsFromIssue(
+  issueNumber: number,
+  pullRequestNumber: number,
+  options: SyncPullRequestLabelsOptions = {},
+  context: GitHubContext = getGitHubContext()
+): Promise<SyncPullRequestLabelsResult> {
+  const mirrorPrefixes = normalizeMirrorPrefixes(options.mirrorPrefixes);
+  const issue = await getIssue(issueNumber, context);
+  const issueLabelNames = collectUniqueLabelNames(
+    issue.labels as IssueLabelLike[]
+  );
+  const currentPullRequestLabels = await listPullRequestLabelNames(
+    pullRequestNumber,
+    context
+  );
+  const mirroredLabelNames = issueLabelNames.filter((labelName) =>
+    hasMirroredPrefix(labelName, mirrorPrefixes)
+  );
+  const computedNextPullRequestLabels = collectUniqueLabelNames([
+    ...currentPullRequestLabels.filter(
+      (labelName) => !hasMirroredPrefix(labelName, mirrorPrefixes)
+    ),
+    ...mirroredLabelNames
+  ]);
+  const changed = !isSameLabelSet(
+    currentPullRequestLabels,
+    computedNextPullRequestLabels
+  );
+  const nextPullRequestLabels = changed
+    ? computedNextPullRequestLabels
+    : currentPullRequestLabels;
+  const dryRun = options.dryRun ?? false;
+
+  if (!dryRun && changed) {
+    await replacePullRequestLabels(
+      pullRequestNumber,
+      nextPullRequestLabels,
+      context
+    );
+  }
+
+  return {
+    changed,
+    currentPullRequestLabels,
+    dryRun,
+    issueNumber,
+    mirroredLabelNames,
+    nextPullRequestLabels,
+    pullRequestNumber
   };
 }
