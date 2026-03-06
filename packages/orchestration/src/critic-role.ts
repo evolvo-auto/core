@@ -30,6 +30,7 @@ export async function runCriticRole(
       observedFailureCount: (input.observedFailures ?? []).length,
       roleName: 'critic'
     },
+    promptDefinition: criticPrompt,
     role: 'critic',
     schema: criticOutputSchema,
     systemPrompt: criticPrompt.buildSystemPrompt(),

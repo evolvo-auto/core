@@ -3,6 +3,7 @@ import type {
   ModelProvider,
   RoleName
 } from '@evolvo/core/model-routing-config';
+import type { PromptDefinitionConfig } from '@evolvo/core/prompt-definition-config';
 import {
   resolveModelRoute,
   type ResolvedModelRoute,
@@ -33,6 +34,7 @@ export type InvokeRoutedStructuredRoleInput<TOutput> = {
   capability?: CapabilityKey;
   metadata?: ModelInvocationMetadata;
   policy?: unknown;
+  promptDefinition?: PromptDefinitionConfig;
   providerClients?: RoleProviderClientOverrides;
   role: RoleName;
   routeOverride?: RuntimeModelRouteOverride;
@@ -92,6 +94,14 @@ async function invokeStructuredOutputOnRoute<TOutput>(
     maxTokens: route.maxTokens,
     metadata: {
       ...(input.metadata ?? {}),
+      ...(input.promptDefinition
+        ? {
+            promptKey: input.promptDefinition.promptKey,
+            promptResponseMode: input.promptDefinition.responseMode,
+            promptTitle: input.promptDefinition.title,
+            promptVersion: input.promptDefinition.version
+          }
+        : {}),
       resolvedCapability: route.capability,
       resolvedModel: route.model,
       resolvedProvider: route.provider,

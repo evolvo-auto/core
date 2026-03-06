@@ -1,6 +1,7 @@
 import type { CapabilityKey } from '@evolvo/core/model-routing-config';
 import {
   evaluatorInterpreterPrompt,
+  type EvaluatorInterpreterCheckPromptInput,
   type EvaluatorInterpreterPromptInput
 } from '@evolvo/genome/prompts/evaluator-interpreter';
 import {
@@ -18,6 +19,9 @@ export type EvaluatorInterpreterRoleInput = EvaluatorInterpreterPromptInput & {
   capability?: CapabilityKey;
 };
 
+export type EvaluatorInterpreterCheckInput =
+  EvaluatorInterpreterCheckPromptInput;
+
 export async function runEvaluatorInterpreterRole(
   input: EvaluatorInterpreterRoleInput,
   invokeRole: InvokeRoutedStructuredRole = invokeRoutedStructuredRole
@@ -30,6 +34,7 @@ export async function runEvaluatorInterpreterRole(
       inputIssueNumber: input.issueNumber,
       roleName: 'evaluator-interpreter'
     },
+    promptDefinition: evaluatorInterpreterPrompt,
     role: 'evaluator-interpreter',
     schema: evaluatorOutputSchema,
     systemPrompt: evaluatorInterpreterPrompt.buildSystemPrompt(),

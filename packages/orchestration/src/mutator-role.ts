@@ -64,6 +64,7 @@ export async function runMutatorRole(
       inputSourceIssueNumber: input.sourceIssueNumber,
       roleName: 'mutator'
     },
+    promptDefinition: mutatorPrompt,
     role: 'mutator',
     schema: mutationProposalSchema,
     systemPrompt: mutatorPrompt.buildSystemPrompt(),

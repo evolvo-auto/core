@@ -53,6 +53,7 @@ export async function runNarratorRole(
       target: input.target,
       targetNumber: input.targetNumber
     },
+    promptDefinition: narratorPrompt,
     role: 'narrator',
     schema: narratorOutputSchema,
     systemPrompt: narratorPrompt.buildSystemPrompt(),

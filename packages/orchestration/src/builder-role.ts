@@ -31,6 +31,7 @@ export async function runBuilderRole(
       inputIssueNumber: input.issueNumber,
       roleName: 'builder'
     },
+    promptDefinition: builderPrompt,
     role: 'builder',
     schema: builderOutputSchema,
     systemPrompt: builderPrompt.buildSystemPrompt(),

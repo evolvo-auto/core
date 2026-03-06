@@ -18,6 +18,7 @@
     "./model-invocation": "./src/model-invocation.ts",
     "./mutation-outcome": "./src/mutation-outcome.ts",
     "./mutation-proposal": "./src/mutation-proposal.ts",
+    "./prompt-definition": "./src/prompt-definition.ts",
     "./worktree-record": "./src/worktree-record.ts"
   },
   "scripts": {

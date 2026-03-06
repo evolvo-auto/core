@@ -102,6 +102,7 @@ export async function runSelectorRole(
       candidatePromotionCount: (input.candidatePromotions ?? []).length,
       roleName: 'selector'
     },
+    promptDefinition: selectorPrompt,
     role: 'governor',
     schema: selectorDecisionSchema,
     systemPrompt: selectorPrompt.buildSystemPrompt(),

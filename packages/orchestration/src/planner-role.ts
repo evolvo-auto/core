@@ -30,6 +30,7 @@ export async function runPlannerRole(
       inputLabels: input.labels ?? [],
       roleName: 'planner'
     },
+    promptDefinition: plannerPrompt,
     role: 'planner',
     schema: plannerOutputSchema,
     systemPrompt: plannerPrompt.buildSystemPrompt(),
