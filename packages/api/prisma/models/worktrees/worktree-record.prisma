@@ -1,0 +1,20 @@
+model WorktreeRecord {
+  id                     String         @id @default(cuid())
+  issueNumber            Int            @map("issue_number")
+  branchName             String         @unique @map("branch_name")
+  filesystemPath         String         @map("filesystem_path")
+  baseRef                String         @map("base_ref")
+  status                 WorktreeStatus
+  lastCommandAt          DateTime?      @map("last_command_at")
+  cleanupEligibleAt      DateTime?      @map("cleanup_eligible_at")
+  linkedPullRequestNumber Int?          @map("linked_pull_request_number")
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+
+  issue    IssueRecord @relation(fields: [issueNumber], references: [githubIssueNumber])
+  attempts Attempt[]
+
+  @@index([issueNumber])
+  @@index([status])
+  @@map("worktrees")
+}

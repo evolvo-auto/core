@@ -1,0 +1,27 @@
+model RuntimeVersion {
+  id                      String               @id @default(cuid())
+  gitRef                  String               @map("git_ref")
+  sourceIssueNumber       Int?                 @map("source_issue_number")
+  sourcePullRequestNumber Int?                 @map("source_pull_request_number")
+  sourceMutationId        String?              @map("source_mutation_id")
+  state                   RuntimeVersionState
+  bootStatus              RuntimeBootStatus?   @map("boot_status")
+  healthStatus            RuntimeHealthStatus? @map("health_status")
+  promotedAt              DateTime?            @map("promoted_at")
+  rolledBackFromVersionId String?              @map("rolled_back_from_version_id")
+  createdAt               DateTime             @default(now()) @map("created_at")
+  updatedAt               DateTime             @updatedAt @map("updated_at")
+
+  sourceIssue            IssueRecord?      @relation(fields: [sourceIssueNumber], references: [githubIssueNumber])
+  sourceMutation         MutationProposal? @relation("SourceMutationVersions", fields: [sourceMutationId], references: [id])
+  rolledBackFromVersion  RuntimeVersion?   @relation("RolledBackVersions", fields: [rolledBackFromVersionId], references: [id])
+  rolledBackToVersions   RuntimeVersion[]  @relation("RolledBackVersions")
+  attempts               Attempt[]
+  benchmarkRuns          BenchmarkRun[]
+  candidateMutationOutcomes MutationOutcome[]
+
+  @@index([sourceIssueNumber])
+  @@index([sourceMutationId])
+  @@index([state])
+  @@map("runtime_versions")
+}

@@ -1,0 +1,18 @@
+model MutationOutcome {
+  id                      String               @id @default(cuid())
+  mutationProposalId      String               @map("mutation_proposal_id")
+  candidateRuntimeVersionId String?            @map("candidate_runtime_version_id")
+  outcome                 MutationOutcomeState
+  benchmarkDelta          Json?                @map("benchmark_delta")
+  notes                   String?              @db.Text
+  adoptedAt               DateTime?            @map("adopted_at")
+  createdAt               DateTime             @default(now()) @map("created_at")
+  updatedAt               DateTime             @updatedAt @map("updated_at")
+
+  mutationProposal        MutationProposal @relation(fields: [mutationProposalId], references: [id])
+  candidateRuntimeVersion RuntimeVersion?  @relation(fields: [candidateRuntimeVersionId], references: [id])
+
+  @@index([mutationProposalId])
+  @@index([candidateRuntimeVersionId])
+  @@map("mutation_outcomes")
+}

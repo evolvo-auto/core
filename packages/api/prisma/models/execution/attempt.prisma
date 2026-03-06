@@ -1,0 +1,25 @@
+model Attempt {
+  id               String            @id @default(cuid())
+  issueNumber      Int               @map("issue_number")
+  worktreeId       String            @map("worktree_id")
+  runtimeVersionId String?           @map("runtime_version_id")
+  startedAt        DateTime          @default(now()) @map("started_at")
+  endedAt          DateTime?         @map("ended_at")
+  outcome          AttemptOutcome?
+  summary          String?           @db.Text
+  evaluationStatus EvaluationStatus? @map("evaluation_status")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  issue            IssueRecord      @relation(fields: [issueNumber], references: [githubIssueNumber])
+  worktree         WorktreeRecord   @relation(fields: [worktreeId], references: [id])
+  runtimeVersion   RuntimeVersion?  @relation(fields: [runtimeVersionId], references: [id])
+  failures         FailureRecord[]
+  benchmarkRuns    BenchmarkRun[]
+  modelInvocations ModelInvocation[]
+
+  @@index([issueNumber])
+  @@index([worktreeId])
+  @@index([runtimeVersionId])
+  @@map("attempts")
+}

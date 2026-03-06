@@ -1,0 +1,12 @@
+model MutationProposalFailure {
+  mutationProposalId String   @map("mutation_proposal_id")
+  failureRecordId    String   @map("failure_record_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  mutationProposal MutationProposal @relation(fields: [mutationProposalId], references: [id])
+  failureRecord    FailureRecord    @relation(fields: [failureRecordId], references: [id])
+
+  @@id([mutationProposalId, failureRecordId])
+  @@index([failureRecordId])
+  @@map("mutation_proposal_failures")
+}

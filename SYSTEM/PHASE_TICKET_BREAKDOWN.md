@@ -45,6 +45,10 @@ Choose Prisma and wire migrations.
 
 ### P0-005 Define initial database schema
 
+Status: done
+Branch: `feature/P0-005-define-initial-database-schema`
+PR: `#5`
+
 Create tables for runtime versions, issues, worktrees, attempts, failures, mutations, benchmarks, model invocations.
 
 ### P0-006 Create shared schema package
